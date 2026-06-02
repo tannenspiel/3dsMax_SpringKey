@@ -1372,39 +1372,7 @@ struct SpringKeyTool
         )
     ),
 
-    fn applySpringTangentsIn ctrl contactTimes impactTime =
-    (
-        try
-        (
-            local keyCount = numKeys ctrl
-            if keyCount > 0 do for i = 1 to keyCount do
-            (
-                local keyTime = getKeyTime ctrl i
-                if keyTime >= impactTime do
-                (
-                    if keyTimeMatchesAny keyTime contactTimes 0.5 do setSmoothKeyTangents ctrl i
-                )
-            )
-        )
-        catch()
-
-        try
-        (
-            for i = 1 to ctrl.numSubs do
-            (
-                try
-                (
-                    local subAnim = ctrl[i]
-                    try(applySpringTangentsIn subAnim contactTimes impactTime)catch()
-                    if subAnim.controller != undefined do applySpringTangentsIn subAnim.controller contactTimes impactTime
-                )
-                catch()
-            )
-        )
-        catch()
-    ),
-
-    fn applyBounceTangentsIn ctrl contactTimes impactTime amp freq decay matchVelocity =
+    fn applyElasticTangentsIn ctrl contactTimes impactTime amp freq decay matchVelocity bounceMode =
     (
         local impactSlope = findImpactIncomingSlope ctrl impactTime
 
@@ -1436,8 +1404,8 @@ struct SpringKeyTool
                 try
                 (
                     local subAnim = ctrl[i]
-                    try(applyBounceTangentsIn subAnim contactTimes impactTime amp freq decay matchVelocity)catch()
-                    if subAnim.controller != undefined do applyBounceTangentsIn subAnim.controller contactTimes impactTime amp freq decay matchVelocity
+                    try(applyElasticTangentsIn subAnim contactTimes impactTime amp freq decay matchVelocity bounceMode)catch()
+                    if subAnim.controller != undefined do applyElasticTangentsIn subAnim.controller contactTimes impactTime amp freq decay matchVelocity bounceMode
                 )
                 catch()
             )
@@ -1558,14 +1526,7 @@ struct SpringKeyTool
             )
         )
 
-        if bounceMode then
-        (
-            applyBounceTangentsIn posCtrl elasticContactTimes impactTime amp freq decay matchVelocity
-        )
-        else
-        (
-            applySpringTangentsIn posCtrl elasticContactTimes impactTime
-        )
+        applyElasticTangentsIn posCtrl elasticContactTimes impactTime amp freq decay matchVelocity bounceMode
     ),
 
     fn deleteKeysAfterTimeIn ctrl cutoffTime =
@@ -1635,18 +1596,9 @@ struct SpringKeyTool
                 )
             )
 
-            if bounceMode then
-            (
-                try(applyBounceTangentsIn rotCtrl[1].controller elasticContactTimes impactTime amp freq decay matchVelocity)catch()
-                try(applyBounceTangentsIn rotCtrl[2].controller elasticContactTimes impactTime amp freq decay matchVelocity)catch()
-                try(applyBounceTangentsIn rotCtrl[3].controller elasticContactTimes impactTime amp freq decay matchVelocity)catch()
-            )
-            else
-            (
-                try(applySpringTangentsIn rotCtrl[1].controller elasticContactTimes impactTime)catch()
-                try(applySpringTangentsIn rotCtrl[2].controller elasticContactTimes impactTime)catch()
-                try(applySpringTangentsIn rotCtrl[3].controller elasticContactTimes impactTime)catch()
-            )
+            try(applyElasticTangentsIn rotCtrl[1].controller elasticContactTimes impactTime amp freq decay matchVelocity bounceMode)catch()
+            try(applyElasticTangentsIn rotCtrl[2].controller elasticContactTimes impactTime amp freq decay matchVelocity bounceMode)catch()
+            try(applyElasticTangentsIn rotCtrl[3].controller elasticContactTimes impactTime amp freq decay matchVelocity bounceMode)catch()
         )
     ),
 
@@ -1670,14 +1622,7 @@ struct SpringKeyTool
             )
         )
 
-        if bounceMode then
-        (
-            applyBounceTangentsIn scaleCtrl elasticContactTimes impactTime amp freq decay matchVelocity
-        )
-        else
-        (
-            applySpringTangentsIn scaleCtrl elasticContactTimes impactTime
-        )
+        applyElasticTangentsIn scaleCtrl elasticContactTimes impactTime amp freq decay matchVelocity bounceMode
     ),
 
     fn bakeNodeRange node doPosition doRotation doScale startTime endTime amp freq decay sample matchVelocity bounceMode threshold keyStep =
