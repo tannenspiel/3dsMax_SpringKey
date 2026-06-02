@@ -56,9 +56,9 @@ the enabled tracks before new keys are written.
   frames.
 - `Match incoming speed`: scales the spring response so it follows the incoming
   velocity more closely. Enabled by default.
-- `Bounce`: uses a one-sided bounce response instead of a two-sided spring
-  oscillation. It uses the same Amplitude, Frequency, Decay, Velocity sample,
-  and Match incoming speed settings.
+- `Bounce`: uses a one-sided bounce response opposite the incoming motion
+  instead of a two-sided spring oscillation. It uses the same Amplitude,
+  Frequency, Decay, Velocity sample, and Match incoming speed settings.
 
 ### Sparse Bake
 
