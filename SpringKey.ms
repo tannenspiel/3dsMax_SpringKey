@@ -1765,6 +1765,7 @@ rollout SpringKey_Rollout "SpringKey" width:248
 
     on chkBounce changed state do
     (
+        if state do chkAutoSpringImpact.checked = false
         chkAutoSpringImpact.enabled = not state
     )
 
@@ -1808,7 +1809,8 @@ rollout SpringKey_Rollout "SpringKey" width:248
                             local startTime = selectedRange[1]
                             local endTime = selectedRange[2]
                             SpringKey.logText ("Using selected key range on " + node.name + ": " + (startTime as string) + " -> " + (endTime as string) + ", selected times: " + (selectedRange[3] as string))
-                            SpringKeyUI.bakeNodeRange node chkPosition.checked chkRotation.checked chkScale.checked startTime endTime spnAmplitude.value spnFrequency.value spnDecay.value spnSampleFrames.value chkMatchVelocity.checked chkBounce.checked spnBakeThreshold.value spnKeyStep.value chkAutoSpringImpact.checked
+                            local autoSpringImpactTangent = chkAutoSpringImpact.checked and (not chkBounce.checked)
+                            SpringKeyUI.bakeNodeRange node chkPosition.checked chkRotation.checked chkScale.checked startTime endTime spnAmplitude.value spnFrequency.value spnDecay.value spnSampleFrames.value chkMatchVelocity.checked chkBounce.checked spnBakeThreshold.value spnKeyStep.value autoSpringImpactTangent
                         )
                     )
                 )
