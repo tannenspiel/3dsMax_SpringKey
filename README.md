@@ -59,7 +59,8 @@ rewritten; generated bake keys are kept strictly after the last selected key.
   velocity more closely. Enabled by default.
 - `Bounce`: uses a one-sided bounce response opposite the incoming motion
   instead of a two-sided spring oscillation. It uses the same Amplitude,
-  Frequency, Decay, Velocity sample, and Match incoming speed settings.
+  Frequency, Decay, Velocity sample, and Match incoming speed settings. Generated
+  bounce contact keys use linear tangents so contacts do not auto-smooth.
 
 ### Sparse Bake
 

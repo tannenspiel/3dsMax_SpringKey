@@ -1210,6 +1210,101 @@ struct SpringKeyTool
         result
     ),
 
+    fn buildBounceContactTimes impactTime freq decay threshold keyStep =
+    (
+        local times = #()
+        local settleTimes = getSpringSettleTimes impactTime freq decay animationRange.end threshold
+        local f = freq / 30.0
+
+        if (settleTimes != undefined and f > 0.0001) do
+        (
+            local settleDt = SpringKey.secondsFromTimeValue (settleTimes[2] - impactTime)
+            local halfPeriod = 1.0 / (2.0 * f)
+            local n = 1
+
+            while (n * halfPeriod) <= settleDt do
+            (
+                addUniqueTime times (quantizeTimeToStep (impactTime + ((n * halfPeriod) * frameRate)) keyStep)
+                n += 1
+            )
+
+            addUniqueTime times (quantizeTimeToStep settleTimes[2] keyStep)
+        )
+
+        times = keepTimesAfter times impactTime
+        sort times
+        times
+    ),
+
+    fn getControllerKey ctrl keyIndex =
+    (
+        local result = undefined
+        try(result = ctrl.keys[keyIndex])catch()
+        if result == undefined do try(result = getKey ctrl keyIndex)catch()
+        result
+    ),
+
+    fn keyTimeMatchesAny keyTime times tolerance =
+    (
+        local result = false
+        for t in times while not result do
+        (
+            if (abs ((keyTime as float) - (t as float))) <= tolerance do result = true
+        )
+        result
+    ),
+
+    fn setBounceContactTangentsIn ctrl contactTimes impactTime =
+    (
+        try
+        (
+            local keyCount = numKeys ctrl
+            if keyCount > 0 do for i = 1 to keyCount do
+            (
+                local keyTime = getKeyTime ctrl i
+                if keyTime > impactTime and keyTimeMatchesAny keyTime contactTimes 0.5 do
+                (
+                    local key = getControllerKey ctrl i
+                    if key != undefined do
+                    (
+                        try(key.inTangentType = #linear)catch()
+                        try(key.outTangentType = #linear)catch()
+                    )
+                )
+            )
+        )
+        catch()
+
+        try
+        (
+            for i = 1 to ctrl.numSubs do
+            (
+                try
+                (
+                    local subAnim = ctrl[i]
+                    try(setBounceContactTangentsIn subAnim contactTimes impactTime)catch()
+                    if subAnim.controller != undefined do setBounceContactTangentsIn subAnim.controller contactTimes impactTime
+                )
+                catch()
+            )
+        )
+        catch()
+    ),
+
+    fn setBounceContactTangents node doPosition doRotation doScale contactTimes impactTime =
+    (
+        if doPosition do try(setBounceContactTangentsIn node.pos.controller contactTimes impactTime)catch()
+        if doRotation do
+        (
+            local rotCtrl = node.rotation.controller
+            try(setBounceContactTangentsIn rotCtrl contactTimes impactTime)catch()
+            try(setBounceContactTangentsIn rotCtrl[1].controller contactTimes impactTime)catch()
+            try(setBounceContactTangentsIn rotCtrl[2].controller contactTimes impactTime)catch()
+            try(setBounceContactTangentsIn rotCtrl[3].controller contactTimes impactTime)catch()
+        )
+        if doScale do try(setBounceContactTangentsIn node.scale.controller contactTimes impactTime)catch()
+    ),
+
     fn tailFadeMultiplier evalTime fadeStartTime settleTime =
     (
         if fadeStartTime == undefined or settleTime == undefined then
@@ -1438,6 +1533,11 @@ struct SpringKeyTool
         if doPosition do bakePositionTrack node sourceNode times endTime amp freq decay sample matchVelocity bounceMode fadeStartTime settleTime
         if doRotation do bakeRotationTrack node sourceNode times endTime amp freq decay sample matchVelocity bounceMode fadeStartTime settleTime
         if doScale do bakeScaleTrack node sourceNode times endTime amp freq decay sample matchVelocity bounceMode fadeStartTime settleTime
+        if bounceMode do
+        (
+            local bounceContactTimes = buildBounceContactTimes endTime freq decay threshold keyStep
+            setBounceContactTangents node doPosition doRotation doScale bounceContactTimes endTime
+        )
 
         try(delete sourceNode)catch()
     ),
