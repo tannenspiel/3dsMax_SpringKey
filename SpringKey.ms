@@ -1199,6 +1199,17 @@ struct SpringKeyTool
         result
     ),
 
+    fn keepTimesAfter times cutoffTime =
+    (
+        local result = #()
+        for t in times do
+        (
+            if ((t as float) - (cutoffTime as float)) > 0.5 do addUniqueTime result t
+        )
+        sort result
+        result
+    ),
+
     fn tailFadeMultiplier evalTime fadeStartTime settleTime =
     (
         if fadeStartTime == undefined or settleTime == undefined then
@@ -1413,7 +1424,8 @@ struct SpringKeyTool
         local times = buildRangeBakeTimes startTime endTime freq decay threshold
         SpringKey.logText ("Bake raw key count: " + (times.count as string) + ", key step: " + (keyStep as string))
         times = quantizeTimes times keyStep
-        if settleTime != undefined do addUniqueTime times settleTime
+        if settleTime != undefined and ((settleTime as float) - (endTime as float)) > 0.5 do addUniqueTime times settleTime
+        times = keepTimesAfter times endTime
         sort times
         if settleTime != undefined do SpringKey.logText ("Bake settle key: " + (settleTime as string))
         SpringKey.logText ("Bake node: " + node.name + ", key count: " + (times.count as string))

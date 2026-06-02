@@ -35,7 +35,8 @@ controllers from the UI.
 
 SpringKey uses the selected key range as the source interval. The spring is baked
 after the selected range, and existing baked keys after that range are cleared on
-the enabled tracks before new keys are written.
+the enabled tracks before new keys are written. Selected source keys are not
+rewritten; generated bake keys are kept strictly after the last selected key.
 
 ## Rollout controls
 
