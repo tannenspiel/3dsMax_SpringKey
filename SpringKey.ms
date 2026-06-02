@@ -1254,7 +1254,7 @@ struct SpringKeyTool
         result
     ),
 
-    fn setBounceContactTangentsIn ctrl contactTimes impactTime =
+    fn setBounceTangentsIn ctrl contactTimes impactTime =
     (
         try
         (
@@ -1262,13 +1262,21 @@ struct SpringKeyTool
             if keyCount > 0 do for i = 1 to keyCount do
             (
                 local keyTime = getKeyTime ctrl i
-                if keyTime > impactTime and keyTimeMatchesAny keyTime contactTimes 0.5 do
+                if keyTime > impactTime do
                 (
                     local key = getControllerKey ctrl i
                     if key != undefined do
                     (
-                        try(key.inTangentType = #linear)catch()
-                        try(key.outTangentType = #linear)catch()
+                        if keyTimeMatchesAny keyTime contactTimes 0.5 then
+                        (
+                            try(key.inTangentType = #fast)catch()
+                            try(key.outTangentType = #fast)catch()
+                        )
+                        else
+                        (
+                            try(key.inTangentType = #slow)catch()
+                            try(key.outTangentType = #slow)catch()
+                        )
                     )
                 )
             )
@@ -1282,8 +1290,8 @@ struct SpringKeyTool
                 try
                 (
                     local subAnim = ctrl[i]
-                    try(setBounceContactTangentsIn subAnim contactTimes impactTime)catch()
-                    if subAnim.controller != undefined do setBounceContactTangentsIn subAnim.controller contactTimes impactTime
+                    try(setBounceTangentsIn subAnim contactTimes impactTime)catch()
+                    if subAnim.controller != undefined do setBounceTangentsIn subAnim.controller contactTimes impactTime
                 )
                 catch()
             )
@@ -1291,18 +1299,18 @@ struct SpringKeyTool
         catch()
     ),
 
-    fn setBounceContactTangents node doPosition doRotation doScale contactTimes impactTime =
+    fn setBounceTangents node doPosition doRotation doScale contactTimes impactTime =
     (
-        if doPosition do try(setBounceContactTangentsIn node.pos.controller contactTimes impactTime)catch()
+        if doPosition do try(setBounceTangentsIn node.pos.controller contactTimes impactTime)catch()
         if doRotation do
         (
             local rotCtrl = node.rotation.controller
-            try(setBounceContactTangentsIn rotCtrl contactTimes impactTime)catch()
-            try(setBounceContactTangentsIn rotCtrl[1].controller contactTimes impactTime)catch()
-            try(setBounceContactTangentsIn rotCtrl[2].controller contactTimes impactTime)catch()
-            try(setBounceContactTangentsIn rotCtrl[3].controller contactTimes impactTime)catch()
+            try(setBounceTangentsIn rotCtrl contactTimes impactTime)catch()
+            try(setBounceTangentsIn rotCtrl[1].controller contactTimes impactTime)catch()
+            try(setBounceTangentsIn rotCtrl[2].controller contactTimes impactTime)catch()
+            try(setBounceTangentsIn rotCtrl[3].controller contactTimes impactTime)catch()
         )
-        if doScale do try(setBounceContactTangentsIn node.scale.controller contactTimes impactTime)catch()
+        if doScale do try(setBounceTangentsIn node.scale.controller contactTimes impactTime)catch()
     ),
 
     fn tailFadeMultiplier evalTime fadeStartTime settleTime =
@@ -1536,7 +1544,7 @@ struct SpringKeyTool
         if bounceMode do
         (
             local bounceContactTimes = buildBounceContactTimes endTime freq decay threshold keyStep
-            setBounceContactTangents node doPosition doRotation doScale bounceContactTimes endTime
+            setBounceTangents node doPosition doRotation doScale bounceContactTimes endTime
         )
 
         try(delete sourceNode)catch()
