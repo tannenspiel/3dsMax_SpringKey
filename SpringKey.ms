@@ -1210,32 +1210,6 @@ struct SpringKeyTool
         result
     ),
 
-    fn buildBounceContactTimes impactTime freq decay threshold keyStep =
-    (
-        local times = #()
-        local settleTimes = getSpringSettleTimes impactTime freq decay animationRange.end threshold
-        local f = freq / 30.0
-
-        if (settleTimes != undefined and f > 0.0001) do
-        (
-            local settleDt = SpringKey.secondsFromTimeValue (settleTimes[2] - impactTime)
-            local halfPeriod = 1.0 / (2.0 * f)
-            local n = 1
-
-            while (n * halfPeriod) <= settleDt do
-            (
-                addUniqueTime times (quantizeTimeToStep (impactTime + ((n * halfPeriod) * frameRate)) keyStep)
-                n += 1
-            )
-
-            addUniqueTime times (quantizeTimeToStep settleTimes[2] keyStep)
-        )
-
-        times = keepTimesAfter times impactTime
-        sort times
-        times
-    ),
-
     fn getControllerKey ctrl keyIndex =
     (
         local result = undefined
@@ -1244,17 +1218,7 @@ struct SpringKeyTool
         result
     ),
 
-    fn keyTimeMatchesAny keyTime times tolerance =
-    (
-        local result = false
-        for t in times while not result do
-        (
-            if (abs ((keyTime as float) - (t as float))) <= tolerance do result = true
-        )
-        result
-    ),
-
-    fn setBounceTangentsIn ctrl contactTimes impactTime =
+    fn setGeneratedTangentsIn ctrl impactTime tangentType =
     (
         try
         (
@@ -1267,16 +1231,8 @@ struct SpringKeyTool
                     local key = getControllerKey ctrl i
                     if key != undefined do
                     (
-                        if keyTimeMatchesAny keyTime contactTimes 0.5 then
-                        (
-                            try(key.inTangentType = #fast)catch()
-                            try(key.outTangentType = #fast)catch()
-                        )
-                        else
-                        (
-                            try(key.inTangentType = #slow)catch()
-                            try(key.outTangentType = #slow)catch()
-                        )
+                        try(key.inTangentType = tangentType)catch()
+                        try(key.outTangentType = tangentType)catch()
                     )
                 )
             )
@@ -1290,8 +1246,8 @@ struct SpringKeyTool
                 try
                 (
                     local subAnim = ctrl[i]
-                    try(setBounceTangentsIn subAnim contactTimes impactTime)catch()
-                    if subAnim.controller != undefined do setBounceTangentsIn subAnim.controller contactTimes impactTime
+                    try(setGeneratedTangentsIn subAnim impactTime tangentType)catch()
+                    if subAnim.controller != undefined do setGeneratedTangentsIn subAnim.controller impactTime tangentType
                 )
                 catch()
             )
@@ -1299,18 +1255,18 @@ struct SpringKeyTool
         catch()
     ),
 
-    fn setBounceTangents node doPosition doRotation doScale contactTimes impactTime =
+    fn setGeneratedTangents node doPosition doRotation doScale impactTime tangentType =
     (
-        if doPosition do try(setBounceTangentsIn node.pos.controller contactTimes impactTime)catch()
+        if doPosition do try(setGeneratedTangentsIn node.pos.controller impactTime tangentType)catch()
         if doRotation do
         (
             local rotCtrl = node.rotation.controller
-            try(setBounceTangentsIn rotCtrl contactTimes impactTime)catch()
-            try(setBounceTangentsIn rotCtrl[1].controller contactTimes impactTime)catch()
-            try(setBounceTangentsIn rotCtrl[2].controller contactTimes impactTime)catch()
-            try(setBounceTangentsIn rotCtrl[3].controller contactTimes impactTime)catch()
+            try(setGeneratedTangentsIn rotCtrl impactTime tangentType)catch()
+            try(setGeneratedTangentsIn rotCtrl[1].controller impactTime tangentType)catch()
+            try(setGeneratedTangentsIn rotCtrl[2].controller impactTime tangentType)catch()
+            try(setGeneratedTangentsIn rotCtrl[3].controller impactTime tangentType)catch()
         )
-        if doScale do try(setBounceTangentsIn node.scale.controller contactTimes impactTime)catch()
+        if doScale do try(setGeneratedTangentsIn node.scale.controller impactTime tangentType)catch()
     ),
 
     fn tailFadeMultiplier evalTime fadeStartTime settleTime =
@@ -1541,11 +1497,7 @@ struct SpringKeyTool
         if doPosition do bakePositionTrack node sourceNode times endTime amp freq decay sample matchVelocity bounceMode fadeStartTime settleTime
         if doRotation do bakeRotationTrack node sourceNode times endTime amp freq decay sample matchVelocity bounceMode fadeStartTime settleTime
         if doScale do bakeScaleTrack node sourceNode times endTime amp freq decay sample matchVelocity bounceMode fadeStartTime settleTime
-        if bounceMode do
-        (
-            local bounceContactTimes = buildBounceContactTimes endTime freq decay threshold keyStep
-            setBounceTangents node doPosition doRotation doScale bounceContactTimes endTime
-        )
+        setGeneratedTangents node doPosition doRotation doScale endTime (if bounceMode then #fast else #slow)
 
         try(delete sourceNode)catch()
     ),
