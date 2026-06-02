@@ -1264,6 +1264,14 @@ struct SpringKeyTool
         try(key.z_locked = false)catch()
     ),
 
+    fn lockBezierKey key =
+    (
+        try(key.freeHandle = false)catch()
+        try(key.x_locked = true)catch()
+        try(key.y_locked = true)catch()
+        try(key.z_locked = true)catch()
+    ),
+
     fn elasticTangentScale amp freq decay dt matchVelocity =
     (
         local a = amp / 200.0
@@ -1372,8 +1380,38 @@ struct SpringKeyTool
         )
     ),
 
-    fn applySpringTangentsIn ctrl contactTimes impactTime =
+    fn setSpringContactKeyTangents ctrl keyIndex contactTimes impactTime impactSlope amp freq decay matchVelocity =
     (
+        local key = getControllerKey ctrl keyIndex
+        if key != undefined do
+        (
+            local contactIndex = findContactIndex key.time contactTimes
+            local isImpactKey = (abs ((key.time as float) - (impactTime as float))) <= 0.5
+            local dt = SpringKey.secondsFromTimeValue (key.time - impactTime)
+            local tangentScale = elasticTangentScale amp freq decay dt matchVelocity
+            local directionMultiplier = if contactIndex != undefined then contactDirectionMultiplier contactIndex false else 1.0
+            local baseSlope = if impactSlope != undefined then impactSlope else zeroLike key.value
+            local contactSlope = baseSlope * tangentScale * directionMultiplier
+
+            lockBezierKey key
+
+            if not isImpactKey do
+            (
+                try(key.inTangentType = #custom)catch()
+                try(key.inTangent = contactSlope)catch()
+                try(key.inTangentLength = 0.333)catch()
+            )
+
+            try(key.outTangentType = #custom)catch()
+            try(key.outTangent = contactSlope)catch()
+            try(key.outTangentLength = 0.333)catch()
+        )
+    ),
+
+    fn applySpringTangentsIn ctrl contactTimes impactTime amp freq decay matchVelocity =
+    (
+        local impactSlope = findImpactIncomingSlope ctrl impactTime
+
         try
         (
             local keyCount = numKeys ctrl
@@ -1382,7 +1420,7 @@ struct SpringKeyTool
                 local keyTime = getKeyTime ctrl i
                 if keyTime >= impactTime do
                 (
-                    if keyTimeMatchesAny keyTime contactTimes 0.5 do setSmoothKeyTangents ctrl i
+                    if keyTimeMatchesAny keyTime contactTimes 0.5 do setSpringContactKeyTangents ctrl i contactTimes impactTime impactSlope amp freq decay matchVelocity
                 )
             )
         )
@@ -1395,8 +1433,8 @@ struct SpringKeyTool
                 try
                 (
                     local subAnim = ctrl[i]
-                    try(applySpringTangentsIn subAnim contactTimes impactTime)catch()
-                    if subAnim.controller != undefined do applySpringTangentsIn subAnim.controller contactTimes impactTime
+                    try(applySpringTangentsIn subAnim contactTimes impactTime amp freq decay matchVelocity)catch()
+                    if subAnim.controller != undefined do applySpringTangentsIn subAnim.controller contactTimes impactTime amp freq decay matchVelocity
                 )
                 catch()
             )
@@ -1564,7 +1602,7 @@ struct SpringKeyTool
         )
         else
         (
-            applySpringTangentsIn posCtrl elasticContactTimes impactTime
+            applySpringTangentsIn posCtrl elasticContactTimes impactTime amp freq decay matchVelocity
         )
     ),
 
@@ -1643,9 +1681,9 @@ struct SpringKeyTool
             )
             else
             (
-                try(applySpringTangentsIn rotCtrl[1].controller elasticContactTimes impactTime)catch()
-                try(applySpringTangentsIn rotCtrl[2].controller elasticContactTimes impactTime)catch()
-                try(applySpringTangentsIn rotCtrl[3].controller elasticContactTimes impactTime)catch()
+                try(applySpringTangentsIn rotCtrl[1].controller elasticContactTimes impactTime amp freq decay matchVelocity)catch()
+                try(applySpringTangentsIn rotCtrl[2].controller elasticContactTimes impactTime amp freq decay matchVelocity)catch()
+                try(applySpringTangentsIn rotCtrl[3].controller elasticContactTimes impactTime amp freq decay matchVelocity)catch()
             )
         )
     ),
@@ -1676,7 +1714,7 @@ struct SpringKeyTool
         )
         else
         (
-            applySpringTangentsIn scaleCtrl elasticContactTimes impactTime
+            applySpringTangentsIn scaleCtrl elasticContactTimes impactTime amp freq decay matchVelocity
         )
     ),
 
