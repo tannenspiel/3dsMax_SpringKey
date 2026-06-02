@@ -1172,38 +1172,6 @@ struct SpringKeyTool
         times
     ),
 
-    fn buildPeakBakeTimes keyTime freq decay rangeEnd threshold keyStep =
-    (
-        local times = #()
-        local f = freq / 30.0
-        local d = decay / 10.0
-        local maxDt = SpringKey.secondsFromTimeValue (rangeEnd - keyTime)
-
-        if f > 0.0001 and maxDt > 0.0 do
-        (
-            local decayLimit = maxDt
-            if d > 0.0001 do
-            (
-                local thresholdLimit = (log (1.0 / threshold)) / d
-                if thresholdLimit < decayLimit do decayLimit = thresholdLimit
-            )
-
-            local w = 2.0 * pi * f
-            local firstPeak = if d > 0.0001 then ((atan (w / d)) / (360.0 * f)) else (1.0 / (4.0 * f))
-            local n = 0
-            while (firstPeak + (n / (2.0 * f))) <= decayLimit do
-            (
-                local dt = firstPeak + (n / (2.0 * f))
-                if dt > 0.0 do addUniqueTime times (quantizeTimeToStep (keyTime + (dt * frameRate)) keyStep)
-                n += 1
-            )
-        )
-
-        times = keepTimesAfter times keyTime
-        sort times
-        times
-    ),
-
     fn frameNumberToTime frameNumber =
     (
         frameNumber as time
@@ -1240,6 +1208,38 @@ struct SpringKeyTool
         )
         sort result
         result
+    ),
+
+    fn buildPeakBakeTimes keyTime freq decay rangeEnd threshold keyStep =
+    (
+        local times = #()
+        local f = freq / 30.0
+        local d = decay / 10.0
+        local maxDt = SpringKey.secondsFromTimeValue (rangeEnd - keyTime)
+
+        if f > 0.0001 and maxDt > 0.0 do
+        (
+            local decayLimit = maxDt
+            if d > 0.0001 do
+            (
+                local thresholdLimit = (log (1.0 / threshold)) / d
+                if thresholdLimit < decayLimit do decayLimit = thresholdLimit
+            )
+
+            local w = 2.0 * pi * f
+            local firstPeak = if d > 0.0001 then ((atan (w / d)) / (360.0 * f)) else (1.0 / (4.0 * f))
+            local n = 0
+            while (firstPeak + (n / (2.0 * f))) <= decayLimit do
+            (
+                local dt = firstPeak + (n / (2.0 * f))
+                if dt > 0.0 do addUniqueTime times (quantizeTimeToStep (keyTime + (dt * frameRate)) keyStep)
+                n += 1
+            )
+        )
+
+        times = keepTimesAfter times keyTime
+        sort times
+        times
     ),
 
     fn getControllerKey ctrl keyIndex =
