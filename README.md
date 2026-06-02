@@ -28,15 +28,16 @@ controllers from the UI.
 
 1. Run `SpringKey.ms` in 3ds Max.
 2. Select one or more animated objects.
-3. Select at least two keys on the enabled transform tracks.
+3. Select the impact key on the enabled transform tracks. If several keys are
+   selected, SpringKey uses the last selected key.
 4. Choose which tracks to bake: Position, Rotation, and/or Scale.
 5. Adjust the Elastic and Sparse Bake settings.
 6. Click `Bake Spring/Bounce To Keys`.
 
-SpringKey uses the selected key range as the source interval. The spring is baked
-after the selected range, and existing baked keys after that range are cleared on
-the enabled tracks before new keys are written. Selected source keys are not
-rewritten; generated bake keys are kept strictly after the last selected key.
+SpringKey uses the last selected key as the impact key. The spring or bounce is
+baked after that key, and existing baked keys after that key are cleared on the
+enabled tracks before new keys are written. Selected source keys are not
+rewritten; generated bake keys are kept strictly after the selected impact key.
 
 ## Rollout controls
 
@@ -63,9 +64,9 @@ rewritten; generated bake keys are kept strictly after the last selected key.
   Frequency, Decay, Velocity sample, and Match incoming speed settings. For
   bounce bakes, generated peak keys use Slow tangents and generated main keys
   use Fast tangents.
-- `Auto spring impact tangent`: spring only. When enabled, the second selected
-  source key is set to Auto tangents so it matches the generated main spring
-  keys. Disabled by default to preserve the original source key.
+- `Auto spring impact tangent`: spring only. When enabled, the selected impact
+  key is set to Auto tangents so it matches the generated main spring keys.
+  Disabled by default to preserve the original source key.
 
 ### Sparse Bake
 
@@ -73,12 +74,12 @@ rewritten; generated bake keys are kept strictly after the last selected key.
   is `1.0`.
 - `Stop threshold`: response threshold used to end the spring tail once the
   damped motion becomes small enough. SpringKey fades the final tail section to
-  a settle key with the same value as the last selected source key. Lower values
+  a settle key with the same value as the selected impact key. Lower values
   keep more tail keys.
 - `Bake Spring/Bounce To Keys`: bakes the spring or bounce result to keys on the
   selected nodes and enabled tracks.
-- `Select at least two keys.`: reminder label. The bake requires a selected key
-  range on the enabled tracks.
+- `Select an impact key.`: reminder label. The bake requires at least one
+  selected key on the enabled tracks.
 
 ### Debug
 

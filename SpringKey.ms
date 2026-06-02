@@ -1032,9 +1032,9 @@ struct SpringKeyTool
         if doScale do try(collectSelectedKeyTimesIn node.scale.controller times)catch()
 
         sort times
-        if times.count >= 2 then
+        if times.count >= 1 then
         (
-            #(times[1], times[times.count], times.count)
+            #(times[times.count], times[times.count], times.count)
         )
         else
         (
@@ -1735,15 +1735,15 @@ rollout SpringKey_Rollout "SpringKey" width:248
         spinner spnSampleFrames "Velocity sample (frames)" range:[0.001,100.0,0.1] type:#float fieldwidth:72 align:#right tooltip:"How many frames before the impact key are sampled to estimate incoming velocity. Smaller values react to the immediate tangent; larger values average over a wider section."
         checkbox chkMatchVelocity "Match incoming speed" checked:true align:#left tooltip:"Scale the spring by the incoming velocity so faster animation produces a stronger overshoot. Turn off for a more fixed, amplitude-driven response."
         checkbox chkBounce "Bounce" checked:false align:#left tooltip:"Use a one-sided bounce response opposite the incoming motion. Uses the same amplitude, frequency, decay, and velocity settings."
-        checkbox chkAutoSpringImpact "Auto spring impact tangent" checked:false align:#left tooltip:"Spring only: set the second selected source key to Auto tangents so it behaves like the main generated spring keys. Leave off to preserve the original animation key."
+        checkbox chkAutoSpringImpact "Auto spring impact tangent" checked:false align:#left tooltip:"Spring only: set the selected impact key to Auto tangents so it behaves like the main generated spring keys. Leave off to preserve the original animation key."
     )
 
     group "Sparse Bake"
     (
         spinner spnKeyStep "Key step" range:[0.0,1000.0,1.0] type:#float scale:0.1 fieldwidth:72 align:#right tooltip:"Snap generated bake keys to this frame interval. 1.0 means whole frames; 2.0 means every 2 frames; 0 disables snapping."
         spinner spnBakeThreshold "Stop threshold" range:[0.0001,1.0,0.01] type:#float scale:0.001 fieldwidth:72 align:#right tooltip:"Start ending the spring tail once the damped response falls below this level, then fade to a final base-value settle key. Lower values keep a longer tail."
-        button btnBake "Bake Spring/Bounce To Keys" width:214 height:28 tooltip:"Bake the spring or bounce result onto selected nodes. Requires at least two selected keys on the enabled tracks."
-        label lblSelectedKeys "Select at least two keys." align:#center tooltip:"SpringKey uses the selected key range as the source interval for the bake."
+        button btnBake "Bake Spring/Bounce To Keys" width:214 height:28 tooltip:"Bake the spring or bounce result after the last selected key on the enabled tracks."
+        label lblSelectedKeys "Select an impact key." align:#center tooltip:"SpringKey uses the last selected key on the enabled tracks as the impact key."
     )
 
     button btnDebug "Debug Selected" width:214 height:24 tooltip:"Print diagnostic information for the selected nodes to the MAXScript Listener and to the log when logging is enabled."
@@ -1785,8 +1785,8 @@ rollout SpringKey_Rollout "SpringKey" width:248
             local jobs = SpringKeyUI.collectBakeJobs selection chkPosition.checked chkRotation.checked chkScale.checked
             if jobs.count == 0 then
             (
-                SpringKey.logText "Bake skipped: no selected key range on enabled tracks."
-                messageBox "Select at least two keys on the enabled tracks before baking." title:"SpringKey"
+                SpringKey.logText "Bake skipped: no selected impact key on enabled tracks."
+                messageBox "Select an impact key on the enabled tracks before baking." title:"SpringKey"
             )
             else
             (
@@ -1808,7 +1808,7 @@ rollout SpringKey_Rollout "SpringKey" width:248
                             local selectedRange = job[2]
                             local startTime = selectedRange[1]
                             local endTime = selectedRange[2]
-                            SpringKey.logText ("Using selected key range on " + node.name + ": " + (startTime as string) + " -> " + (endTime as string) + ", selected times: " + (selectedRange[3] as string))
+                            SpringKey.logText ("Using selected impact key on " + node.name + ": " + (endTime as string) + ", selected times: " + (selectedRange[3] as string))
                             local autoSpringImpactTangent = chkAutoSpringImpact.checked and (not chkBounce.checked)
                             SpringKeyUI.bakeNodeRange node chkPosition.checked chkRotation.checked chkScale.checked startTime endTime spnAmplitude.value spnFrequency.value spnDecay.value spnSampleFrames.value chkMatchVelocity.checked chkBounce.checked spnBakeThreshold.value spnKeyStep.value autoSpringImpactTangent
                         )
