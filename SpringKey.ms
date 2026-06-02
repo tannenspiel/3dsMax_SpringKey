@@ -1274,6 +1274,53 @@ struct SpringKeyTool
         )
     ),
 
+    fn setKeyTangentTypeAtTimeIn ctrl targetTime tangentType =
+    (
+        try
+        (
+            local keyCount = numKeys ctrl
+            if keyCount > 0 do for i = 1 to keyCount do
+            (
+                local keyTime = getKeyTime ctrl i
+                if (abs ((keyTime as float) - (targetTime as float))) <= 0.5 do
+                (
+                    local key = getControllerKey ctrl i
+                    if key != undefined do setKeyTangentType key tangentType
+                )
+            )
+        )
+        catch()
+
+        try
+        (
+            for i = 1 to ctrl.numSubs do
+            (
+                try
+                (
+                    local subAnim = ctrl[i]
+                    try(setKeyTangentTypeAtTimeIn subAnim targetTime tangentType)catch()
+                    if subAnim.controller != undefined do setKeyTangentTypeAtTimeIn subAnim.controller targetTime tangentType
+                )
+                catch()
+            )
+        )
+        catch()
+    ),
+
+    fn setKeyTangentTypeAtTime node doPosition doRotation doScale targetTime tangentType =
+    (
+        if doPosition do try(setKeyTangentTypeAtTimeIn node.pos.controller targetTime tangentType)catch()
+        if doRotation do
+        (
+            local rotCtrl = node.rotation.controller
+            try(setKeyTangentTypeAtTimeIn rotCtrl targetTime tangentType)catch()
+            try(setKeyTangentTypeAtTimeIn rotCtrl[1].controller targetTime tangentType)catch()
+            try(setKeyTangentTypeAtTimeIn rotCtrl[2].controller targetTime tangentType)catch()
+            try(setKeyTangentTypeAtTimeIn rotCtrl[3].controller targetTime tangentType)catch()
+        )
+        if doScale do try(setKeyTangentTypeAtTimeIn node.scale.controller targetTime tangentType)catch()
+    ),
+
     fn setGeneratedTangentsIn ctrl impactTime peakTimes mainTangentType peakTangentType =
     (
         try
@@ -1517,7 +1564,7 @@ struct SpringKeyTool
         )
     ),
 
-    fn bakeNodeRange node doPosition doRotation doScale startTime endTime amp freq decay sample matchVelocity bounceMode threshold keyStep =
+    fn bakeNodeRange node doPosition doRotation doScale startTime endTime amp freq decay sample matchVelocity bounceMode threshold keyStep autoSpringImpactTangent =
     (
         local sourceNode = point name:(uniqueName (node.name + "_SpringKey_BAKE_SRC")) size:20 box:false cross:true axistripod:true centermarker:true
         sourceNode.parent = node.parent
@@ -1556,6 +1603,7 @@ struct SpringKeyTool
         local peakTimes = buildPeakBakeTimes endTime freq decay animationRange.end threshold keyStep
         local mainTangentType = if bounceMode then #fast else #auto
         setGeneratedTangents node doPosition doRotation doScale endTime peakTimes mainTangentType #slow
+        if (autoSpringImpactTangent and (not bounceMode)) do setKeyTangentTypeAtTime node doPosition doRotation doScale endTime #auto
 
         try(delete sourceNode)catch()
     ),
@@ -1565,7 +1613,7 @@ struct SpringKeyTool
         local startTime = animationRange.start
         local endTime = trackbar.getPreviousKeyTime()
         if endTime == undefined do endTime = animationRange.end
-        bakeNodeRange node doPosition doRotation doScale startTime endTime amp freq decay sample matchVelocity false threshold 1.0
+        bakeNodeRange node doPosition doRotation doScale startTime endTime amp freq decay sample matchVelocity false threshold 1.0 false
     ),
 
     fn wrapPosition node amp freq decay sample matchVelocity =
@@ -1687,6 +1735,7 @@ rollout SpringKey_Rollout "SpringKey" width:248
         spinner spnSampleFrames "Velocity sample (frames)" range:[0.001,100.0,0.1] type:#float fieldwidth:72 align:#right tooltip:"How many frames before the impact key are sampled to estimate incoming velocity. Smaller values react to the immediate tangent; larger values average over a wider section."
         checkbox chkMatchVelocity "Match incoming speed" checked:true align:#left tooltip:"Scale the spring by the incoming velocity so faster animation produces a stronger overshoot. Turn off for a more fixed, amplitude-driven response."
         checkbox chkBounce "Bounce" checked:false align:#left tooltip:"Use a one-sided bounce response opposite the incoming motion. Uses the same amplitude, frequency, decay, and velocity settings."
+        checkbox chkAutoSpringImpact "Auto spring impact tangent" checked:false align:#left tooltip:"Spring only: set the second selected source key to Auto tangents so it behaves like the main generated spring keys. Leave off to preserve the original animation key."
     )
 
     group "Sparse Bake"
@@ -1712,6 +1761,11 @@ rollout SpringKey_Rollout "SpringKey" width:248
     (
         SpringKey.setLogging state
         if state do SpringKey.logText "Logging enabled from UI."
+    )
+
+    on chkBounce changed state do
+    (
+        chkAutoSpringImpact.enabled = not state
     )
 
     on btnClearLog pressed do
@@ -1754,7 +1808,7 @@ rollout SpringKey_Rollout "SpringKey" width:248
                             local startTime = selectedRange[1]
                             local endTime = selectedRange[2]
                             SpringKey.logText ("Using selected key range on " + node.name + ": " + (startTime as string) + " -> " + (endTime as string) + ", selected times: " + (selectedRange[3] as string))
-                            SpringKeyUI.bakeNodeRange node chkPosition.checked chkRotation.checked chkScale.checked startTime endTime spnAmplitude.value spnFrequency.value spnDecay.value spnSampleFrames.value chkMatchVelocity.checked chkBounce.checked spnBakeThreshold.value spnKeyStep.value
+                            SpringKeyUI.bakeNodeRange node chkPosition.checked chkRotation.checked chkScale.checked startTime endTime spnAmplitude.value spnFrequency.value spnDecay.value spnSampleFrames.value chkMatchVelocity.checked chkBounce.checked spnBakeThreshold.value spnKeyStep.value chkAutoSpringImpact.checked
                         )
                     )
                 )

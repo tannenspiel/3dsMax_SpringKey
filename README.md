@@ -63,6 +63,9 @@ rewritten; generated bake keys are kept strictly after the last selected key.
   Frequency, Decay, Velocity sample, and Match incoming speed settings. For
   bounce bakes, generated peak keys use Slow tangents and generated main keys
   use Fast tangents.
+- `Auto spring impact tangent`: spring only. When enabled, the second selected
+  source key is set to Auto tangents so it matches the generated main spring
+  keys. Disabled by default to preserve the original source key.
 
 ### Sparse Bake
 
