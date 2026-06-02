@@ -8,9 +8,8 @@ Sparse spring/elastic key baker for 3ds Max transform animation.
 spring or bounce response onto selected Position, Rotation, and/or Scale tracks.
 
 The script estimates incoming velocity at the selected source key, then adds a
-damped elastic response after that key. It bakes sparse zero/contact keys and
-uses custom tangents to shape the arcs instead of adding peak keys or baking
-every frame.
+damped sine response after that key. It creates only the spring keys it needs,
+using a sparse key list instead of baking every frame.
 
 SpringKey bakes transform controller values in local space, so linked objects
 keep their animation relative to animated parents.
@@ -60,8 +59,9 @@ the enabled tracks before new keys are written.
 - `Bounce`: uses a one-sided bounce response opposite the incoming motion
   instead of a two-sided spring oscillation. It uses the same Amplitude,
   Frequency, Decay, Velocity sample, and Match incoming speed settings. Bounce
-  uses broken custom tangents so the curve keeps an impact/redirect shape
-  instead of auto-smoothing through the contact.
+  bakes contact keys only; the arcs are shaped by broken custom tangents so the
+  curve keeps an impact/redirect shape instead of auto-smoothing through the
+  contact.
 
 ### Sparse Bake
 
