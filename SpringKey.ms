@@ -97,7 +97,7 @@ struct SpringKeyCore
             local f = freq / 30.0
             local d = decay / 10.0
             local wave = (sin (f * dt * 360.0)) / (exp (d * dt))
-            if bounceMode do wave = -(abs wave)
+            if bounceMode do wave = abs wave
 
             if matchVelocity and f > 0.0001 then
             (
@@ -1709,7 +1709,7 @@ rollout SpringKey_Rollout "SpringKey" width:248
         spinner spnDecay "Decay" range:[0.0,10000.0,50.0] type:#float fieldwidth:72 align:#right tooltip:"Controls how quickly the spring fades out. Higher values stop the motion sooner."
         spinner spnSampleFrames "Velocity sample (frames)" range:[0.001,100.0,0.1] type:#float fieldwidth:72 align:#right tooltip:"How many frames before the impact key are sampled to estimate incoming velocity. Smaller values react to the immediate tangent; larger values average over a wider section."
         checkbox chkMatchVelocity "Match incoming speed" checked:true align:#left tooltip:"Scale the spring by the incoming velocity so faster animation produces a stronger overshoot. Turn off for a more fixed, amplitude-driven response."
-        checkbox chkBounce "Bounce" checked:false align:#left tooltip:"Use a one-sided bounce response opposite the incoming motion. Contact keys get broken custom tangents for a bounce impact shape."
+        checkbox chkBounce "Bounce" checked:false align:#left tooltip:"Use a one-sided bounce response instead of a two-sided spring oscillation. Contact keys get broken custom tangents for a bounce impact shape."
     )
 
     group "Sparse Bake"
