@@ -11,6 +11,9 @@ The script estimates incoming velocity at the selected source key, then adds a
 damped sine response after that key. It creates only the spring keys it needs,
 using a sparse key list instead of baking every frame.
 
+SpringKey bakes transform controller values in local space, so linked objects
+keep their animation relative to animated parents.
+
 Internally the file also defines MAXScript scripted controller plugins:
 
 - `SpringKey Position`
@@ -84,4 +87,6 @@ the enabled tracks before new keys are written.
 
 - Rotation baking currently expects an `Euler_XYZ` rotation controller when it
   needs to preserve spins greater than 360 degrees.
+- Position and Scale are written to their local transform controllers, not to
+  world-space object properties.
 - `SpringKey_debug.log` is generated only when logging is enabled or cleared.

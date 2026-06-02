@@ -1290,14 +1290,15 @@ struct SpringKeyTool
     (
         local values = #()
         for t in times do append values #(t, springPoint3FromRangeAt sourceNode.pos.controller t impactTime amp freq decay sample matchVelocity fadeStartTime settleTime)
+        local posCtrl = node.pos.controller
 
         animate on
         (
             for item in values do at time item[1]
             (
                 local value = item[2]
-                SpringKey.logText ("Bake Position " + (item[1] as string) + " = " + (value as string))
-                node.pos = value
+                SpringKey.logText ("Bake Local Position " + (item[1] as string) + " = " + (value as string))
+                posCtrl.value = value
             )
         )
     ),
@@ -1371,14 +1372,15 @@ struct SpringKeyTool
     (
         local values = #()
         for t in times do append values #(t, springPoint3FromRangeAt sourceNode.scale.controller t impactTime amp freq decay sample matchVelocity fadeStartTime settleTime)
+        local scaleCtrl = node.scale.controller
 
         animate on
         (
             for item in values do at time item[1]
             (
                 local value = item[2]
-                SpringKey.logText ("Bake Scale " + (item[1] as string) + " = " + (value as string))
-                node.scale = value
+                SpringKey.logText ("Bake Local Scale " + (item[1] as string) + " = " + (value as string))
+                scaleCtrl.value = value
             )
         )
     ),
