@@ -56,12 +56,13 @@ rewritten; generated bake keys are kept strictly after the last selected key.
   the original animation to estimate incoming velocity. The default is `0.1`
   frames.
 - `Match incoming speed`: scales the spring response so it follows the incoming
-  velocity more closely. Enabled by default. Generated spring keys use Slow
-  tangents.
+  velocity more closely. Enabled by default. For spring bakes, generated peak
+  keys use Slow tangents and generated main keys use Auto tangents.
 - `Bounce`: uses a one-sided bounce response opposite the incoming motion
   instead of a two-sided spring oscillation. It uses the same Amplitude,
-  Frequency, Decay, Velocity sample, and Match incoming speed settings. Generated
-  bounce keys use Fast tangents.
+  Frequency, Decay, Velocity sample, and Match incoming speed settings. For
+  bounce bakes, generated peak keys use Slow tangents and generated main keys
+  use Fast tangents.
 
 ### Sparse Bake
 

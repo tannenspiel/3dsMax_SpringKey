@@ -1172,6 +1172,38 @@ struct SpringKeyTool
         times
     ),
 
+    fn buildPeakBakeTimes keyTime freq decay rangeEnd threshold keyStep =
+    (
+        local times = #()
+        local f = freq / 30.0
+        local d = decay / 10.0
+        local maxDt = SpringKey.secondsFromTimeValue (rangeEnd - keyTime)
+
+        if f > 0.0001 and maxDt > 0.0 do
+        (
+            local decayLimit = maxDt
+            if d > 0.0001 do
+            (
+                local thresholdLimit = (log (1.0 / threshold)) / d
+                if thresholdLimit < decayLimit do decayLimit = thresholdLimit
+            )
+
+            local w = 2.0 * pi * f
+            local firstPeak = if d > 0.0001 then ((atan (w / d)) / (360.0 * f)) else (1.0 / (4.0 * f))
+            local n = 0
+            while (firstPeak + (n / (2.0 * f))) <= decayLimit do
+            (
+                local dt = firstPeak + (n / (2.0 * f))
+                if dt > 0.0 do addUniqueTime times (quantizeTimeToStep (keyTime + (dt * frameRate)) keyStep)
+                n += 1
+            )
+        )
+
+        times = keepTimesAfter times keyTime
+        sort times
+        times
+    ),
+
     fn frameNumberToTime frameNumber =
     (
         frameNumber as time
@@ -1218,7 +1250,31 @@ struct SpringKeyTool
         result
     ),
 
-    fn setGeneratedTangentsIn ctrl impactTime tangentType =
+    fn keyTimeMatchesAny keyTime times toleranceTicks =
+    (
+        local matches = false
+        for t in times while matches == false do
+        (
+            if (abs ((keyTime as float) - (t as float))) <= toleranceTicks do matches = true
+        )
+        matches
+    ),
+
+    fn setKeyTangentType key tangentType =
+    (
+        if tangentType == #auto then
+        (
+            try(key.inTangentType = #auto)catch(try(key.inTangentType = #smooth)catch())
+            try(key.outTangentType = #auto)catch(try(key.outTangentType = #smooth)catch())
+        )
+        else
+        (
+            try(key.inTangentType = tangentType)catch()
+            try(key.outTangentType = tangentType)catch()
+        )
+    ),
+
+    fn setGeneratedTangentsIn ctrl impactTime peakTimes mainTangentType peakTangentType =
     (
         try
         (
@@ -1231,8 +1287,8 @@ struct SpringKeyTool
                     local key = getControllerKey ctrl i
                     if key != undefined do
                     (
-                        try(key.inTangentType = tangentType)catch()
-                        try(key.outTangentType = tangentType)catch()
+                        local tangentType = if keyTimeMatchesAny keyTime peakTimes 0.5 then peakTangentType else mainTangentType
+                        setKeyTangentType key tangentType
                     )
                 )
             )
@@ -1246,8 +1302,8 @@ struct SpringKeyTool
                 try
                 (
                     local subAnim = ctrl[i]
-                    try(setGeneratedTangentsIn subAnim impactTime tangentType)catch()
-                    if subAnim.controller != undefined do setGeneratedTangentsIn subAnim.controller impactTime tangentType
+                    try(setGeneratedTangentsIn subAnim impactTime peakTimes mainTangentType peakTangentType)catch()
+                    if subAnim.controller != undefined do setGeneratedTangentsIn subAnim.controller impactTime peakTimes mainTangentType peakTangentType
                 )
                 catch()
             )
@@ -1255,18 +1311,18 @@ struct SpringKeyTool
         catch()
     ),
 
-    fn setGeneratedTangents node doPosition doRotation doScale impactTime tangentType =
+    fn setGeneratedTangents node doPosition doRotation doScale impactTime peakTimes mainTangentType peakTangentType =
     (
-        if doPosition do try(setGeneratedTangentsIn node.pos.controller impactTime tangentType)catch()
+        if doPosition do try(setGeneratedTangentsIn node.pos.controller impactTime peakTimes mainTangentType peakTangentType)catch()
         if doRotation do
         (
             local rotCtrl = node.rotation.controller
-            try(setGeneratedTangentsIn rotCtrl impactTime tangentType)catch()
-            try(setGeneratedTangentsIn rotCtrl[1].controller impactTime tangentType)catch()
-            try(setGeneratedTangentsIn rotCtrl[2].controller impactTime tangentType)catch()
-            try(setGeneratedTangentsIn rotCtrl[3].controller impactTime tangentType)catch()
+            try(setGeneratedTangentsIn rotCtrl impactTime peakTimes mainTangentType peakTangentType)catch()
+            try(setGeneratedTangentsIn rotCtrl[1].controller impactTime peakTimes mainTangentType peakTangentType)catch()
+            try(setGeneratedTangentsIn rotCtrl[2].controller impactTime peakTimes mainTangentType peakTangentType)catch()
+            try(setGeneratedTangentsIn rotCtrl[3].controller impactTime peakTimes mainTangentType peakTangentType)catch()
         )
-        if doScale do try(setGeneratedTangentsIn node.scale.controller impactTime tangentType)catch()
+        if doScale do try(setGeneratedTangentsIn node.scale.controller impactTime peakTimes mainTangentType peakTangentType)catch()
     ),
 
     fn tailFadeMultiplier evalTime fadeStartTime settleTime =
@@ -1497,7 +1553,9 @@ struct SpringKeyTool
         if doPosition do bakePositionTrack node sourceNode times endTime amp freq decay sample matchVelocity bounceMode fadeStartTime settleTime
         if doRotation do bakeRotationTrack node sourceNode times endTime amp freq decay sample matchVelocity bounceMode fadeStartTime settleTime
         if doScale do bakeScaleTrack node sourceNode times endTime amp freq decay sample matchVelocity bounceMode fadeStartTime settleTime
-        setGeneratedTangents node doPosition doRotation doScale endTime (if bounceMode then #fast else #slow)
+        local peakTimes = buildPeakBakeTimes endTime freq decay animationRange.end threshold keyStep
+        local mainTangentType = if bounceMode then #fast else #auto
+        setGeneratedTangents node doPosition doRotation doScale endTime peakTimes mainTangentType #slow
 
         try(delete sourceNode)catch()
     ),
