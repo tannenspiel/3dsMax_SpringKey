@@ -59,8 +59,9 @@ the enabled tracks before new keys are written.
 - `Bounce`: uses a one-sided bounce response opposite the incoming motion
   instead of a two-sided spring oscillation. It uses the same Amplitude,
   Frequency, Decay, Velocity sample, and Match incoming speed settings. Bounce
-  contact keys get broken custom tangents so the curve keeps an impact/redirect
-  shape instead of auto-smoothing through the contact.
+  bakes contact keys only; the arcs are shaped by broken custom tangents so the
+  curve keeps an impact/redirect shape instead of auto-smoothing through the
+  contact.
 
 ### Sparse Bake
 
