@@ -25,6 +25,9 @@ Internally the file also defines MAXScript scripted controller plugins:
 The current rollout is focused on direct sparse key creation, not on applying
 persistent live controllers from the UI.
 
+It also includes a separate Anticipation tool for shaping the start of an
+existing movement by editing Bezier tangents.
+
 ## Usage
 
 1. Run `SpringKey.ms` in 3ds Max.
@@ -82,6 +85,17 @@ key.
   nodes and enabled tracks.
 - `Select an impact key.`: reminder label. Key creation requires at least one
   selected key on the enabled tracks.
+
+### Anticipation
+
+- `Create Anticipation Tangent`: adjusts an existing movement start. Select the
+  first key of the movement; SpringKey finds the next key on the same enabled
+  track. The selected start key is set to Auto tangents. The following key keeps
+  its existing incoming tangent direction, but its incoming handle length is
+  extended until that tangent intersects the start key tangent.
+- `Select a start key.`: reminder label. The Anticipation tool requires a
+  selected start key and a following key on the enabled tracks. It edits
+  tangents only and does not create new keys.
 
 ### Debug
 
