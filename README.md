@@ -35,7 +35,9 @@ controllers from the UI.
 
 SpringKey uses the selected key range as the source interval. The spring is baked
 after the selected range, and existing baked keys after that range are cleared on
-the enabled tracks before new keys are written.
+the enabled tracks before new keys are written. The outgoing tangent of the last
+selected source key is restored from the incoming curve direction so the elastic
+tail does not start from an artificial flat tangent.
 
 ## Rollout controls
 
