@@ -85,7 +85,7 @@ struct SpringKeyCore
     ),
 
 
-    fn dampingMultiplier amp freq decay dt matchVelocity =
+    fn elasticMultiplier amp freq decay dt matchVelocity bounceMode =
     (
         if dt <= 0.0 then
         (
@@ -97,6 +97,7 @@ struct SpringKeyCore
             local f = freq / 30.0
             local d = decay / 10.0
             local wave = (sin (f * dt * 360.0)) / (exp (d * dt))
+            if bounceMode do wave = abs wave
 
             if matchVelocity and f > 0.0001 then
             (
@@ -107,6 +108,11 @@ struct SpringKeyCore
                 a * wave
             )
         )
+    ),
+
+    fn dampingMultiplier amp freq decay dt matchVelocity =
+    (
+        elasticMultiplier amp freq decay dt matchVelocity false
     ),
 
     fn scanControllerForPreviousKey c targetTime bestSoFar =
@@ -1222,7 +1228,7 @@ struct SpringKeyTool
         )
     ),
 
-    fn springPoint3FromRangeAt baseCtrl evalTime impactTime amp freq decay sampleFrames matchVelocity fadeStartTime settleTime =
+    fn springPoint3FromRangeAt baseCtrl evalTime impactTime amp freq decay sampleFrames matchVelocity bounceMode fadeStartTime settleTime =
     (
         local baseTime = if evalTime <= impactTime then evalTime else impactTime
         local baseValue = at time baseTime baseCtrl.value
@@ -1247,12 +1253,12 @@ struct SpringKeyTool
                 local valueBefore = at time sampleTime baseCtrl.value
                 local velocity = (valueAtKey - valueBefore) / sampleDt
                 local fade = tailFadeMultiplier evalTime fadeStartTime settleTime
-                baseValue + ((velocity * (SpringKey.dampingMultiplier amp freq decay dt matchVelocity)) * fade)
+                baseValue + ((velocity * (SpringKey.elasticMultiplier amp freq decay dt matchVelocity bounceMode)) * fade)
             )
         )
     ),
 
-    fn springEulerFromRangeAt baseCtrl evalTime impactTime amp freq decay sampleFrames matchVelocity fadeStartTime settleTime =
+    fn springEulerFromRangeAt baseCtrl evalTime impactTime amp freq decay sampleFrames matchVelocity bounceMode fadeStartTime settleTime =
     (
         local baseTime = if evalTime <= impactTime then evalTime else impactTime
         local baseEuler = SpringKey.getEulerAxisValues baseCtrl baseTime
@@ -1281,15 +1287,15 @@ struct SpringKeyTool
             (
                 local angularVelocity = (keyEuler - beforeEuler) / sampleDt
                 local fade = tailFadeMultiplier evalTime fadeStartTime settleTime
-                baseEuler + ((angularVelocity * (SpringKey.dampingMultiplier amp freq decay dt matchVelocity)) * fade)
+                baseEuler + ((angularVelocity * (SpringKey.elasticMultiplier amp freq decay dt matchVelocity bounceMode)) * fade)
             )
         )
     ),
 
-    fn bakePositionTrack node sourceNode times impactTime amp freq decay sample matchVelocity fadeStartTime settleTime =
+    fn bakePositionTrack node sourceNode times impactTime amp freq decay sample matchVelocity bounceMode fadeStartTime settleTime =
     (
         local values = #()
-        for t in times do append values #(t, springPoint3FromRangeAt sourceNode.pos.controller t impactTime amp freq decay sample matchVelocity fadeStartTime settleTime)
+        for t in times do append values #(t, springPoint3FromRangeAt sourceNode.pos.controller t impactTime amp freq decay sample matchVelocity bounceMode fadeStartTime settleTime)
         local posCtrl = node.pos.controller
 
         animate on
@@ -1342,7 +1348,7 @@ struct SpringKeyTool
         if doScale do try(deleteKeysAfterTimeIn node.scale.controller cutoffTime)catch()
     ),
 
-    fn bakeRotationTrack node sourceNode times impactTime amp freq decay sample matchVelocity fadeStartTime settleTime =
+    fn bakeRotationTrack node sourceNode times impactTime amp freq decay sample matchVelocity bounceMode fadeStartTime settleTime =
     (
         local rotCtrl = node.rotation.controller
         if ((classOf rotCtrl as string) != "Euler_XYZ") then
@@ -1352,7 +1358,7 @@ struct SpringKeyTool
         else
         (
             local values = #()
-            for t in times do append values #(t, springEulerFromRangeAt sourceNode.rotation.controller t impactTime amp freq decay sample matchVelocity fadeStartTime settleTime)
+            for t in times do append values #(t, springEulerFromRangeAt sourceNode.rotation.controller t impactTime amp freq decay sample matchVelocity bounceMode fadeStartTime settleTime)
 
             animate on
             (
@@ -1368,10 +1374,10 @@ struct SpringKeyTool
         )
     ),
 
-    fn bakeScaleTrack node sourceNode times impactTime amp freq decay sample matchVelocity fadeStartTime settleTime =
+    fn bakeScaleTrack node sourceNode times impactTime amp freq decay sample matchVelocity bounceMode fadeStartTime settleTime =
     (
         local values = #()
-        for t in times do append values #(t, springPoint3FromRangeAt sourceNode.scale.controller t impactTime amp freq decay sample matchVelocity fadeStartTime settleTime)
+        for t in times do append values #(t, springPoint3FromRangeAt sourceNode.scale.controller t impactTime amp freq decay sample matchVelocity bounceMode fadeStartTime settleTime)
         local scaleCtrl = node.scale.controller
 
         animate on
@@ -1385,7 +1391,7 @@ struct SpringKeyTool
         )
     ),
 
-    fn bakeNodeRange node doPosition doRotation doScale startTime endTime amp freq decay sample matchVelocity threshold keyStep =
+    fn bakeNodeRange node doPosition doRotation doScale startTime endTime amp freq decay sample matchVelocity bounceMode threshold keyStep =
     (
         local sourceNode = point name:(uniqueName (node.name + "_SpringKey_BAKE_SRC")) size:20 box:false cross:true axistripod:true centermarker:true
         sourceNode.parent = node.parent
@@ -1417,9 +1423,9 @@ struct SpringKeyTool
             SpringKey.logText ("Bake last time: " + (times[times.count] as string))
         )
 
-        if doPosition do bakePositionTrack node sourceNode times endTime amp freq decay sample matchVelocity fadeStartTime settleTime
-        if doRotation do bakeRotationTrack node sourceNode times endTime amp freq decay sample matchVelocity fadeStartTime settleTime
-        if doScale do bakeScaleTrack node sourceNode times endTime amp freq decay sample matchVelocity fadeStartTime settleTime
+        if doPosition do bakePositionTrack node sourceNode times endTime amp freq decay sample matchVelocity bounceMode fadeStartTime settleTime
+        if doRotation do bakeRotationTrack node sourceNode times endTime amp freq decay sample matchVelocity bounceMode fadeStartTime settleTime
+        if doScale do bakeScaleTrack node sourceNode times endTime amp freq decay sample matchVelocity bounceMode fadeStartTime settleTime
 
         try(delete sourceNode)catch()
     ),
@@ -1429,7 +1435,7 @@ struct SpringKeyTool
         local startTime = animationRange.start
         local endTime = trackbar.getPreviousKeyTime()
         if endTime == undefined do endTime = animationRange.end
-        bakeNodeRange node doPosition doRotation doScale startTime endTime amp freq decay sample matchVelocity threshold 1.0
+        bakeNodeRange node doPosition doRotation doScale startTime endTime amp freq decay sample matchVelocity false threshold 1.0
     ),
 
     fn wrapPosition node amp freq decay sample matchVelocity =
@@ -1550,13 +1556,14 @@ rollout SpringKey_Rollout "SpringKey" width:248
         spinner spnDecay "Decay" range:[0.0,10000.0,50.0] type:#float fieldwidth:72 align:#right tooltip:"Controls how quickly the spring fades out. Higher values stop the motion sooner."
         spinner spnSampleFrames "Velocity sample (frames)" range:[0.001,100.0,0.1] type:#float fieldwidth:72 align:#right tooltip:"How many frames before the impact key are sampled to estimate incoming velocity. Smaller values react to the immediate tangent; larger values average over a wider section."
         checkbox chkMatchVelocity "Match incoming speed" checked:true align:#left tooltip:"Scale the spring by the incoming velocity so faster animation produces a stronger overshoot. Turn off for a more fixed, amplitude-driven response."
+        checkbox chkBounce "Bounce" checked:false align:#left tooltip:"Use a one-sided bounce response instead of a two-sided spring oscillation. Uses the same amplitude, frequency, decay, and velocity settings."
     )
 
     group "Sparse Bake"
     (
         spinner spnKeyStep "Key step" range:[0.0,1000.0,1.0] type:#float scale:0.1 fieldwidth:72 align:#right tooltip:"Snap generated bake keys to this frame interval. 1.0 means whole frames; 2.0 means every 2 frames; 0 disables snapping."
         spinner spnBakeThreshold "Stop threshold" range:[0.0001,1.0,0.01] type:#float scale:0.001 fieldwidth:72 align:#right tooltip:"Start ending the spring tail once the damped response falls below this level, then fade to a final base-value settle key. Lower values keep a longer tail."
-        button btnBake "Bake Spring To Keys" width:214 height:28 tooltip:"Bake the spring result onto selected nodes. Requires at least two selected keys on the enabled tracks."
+        button btnBake "Bake Spring/Bounce To Keys" width:214 height:28 tooltip:"Bake the spring or bounce result onto selected nodes. Requires at least two selected keys on the enabled tracks."
         label lblSelectedKeys "Select at least two keys." align:#center tooltip:"SpringKey uses the selected key range as the source interval for the bake."
     )
 
@@ -1617,7 +1624,7 @@ rollout SpringKey_Rollout "SpringKey" width:248
                             local startTime = selectedRange[1]
                             local endTime = selectedRange[2]
                             SpringKey.logText ("Using selected key range on " + node.name + ": " + (startTime as string) + " -> " + (endTime as string) + ", selected times: " + (selectedRange[3] as string))
-                            SpringKeyUI.bakeNodeRange node chkPosition.checked chkRotation.checked chkScale.checked startTime endTime spnAmplitude.value spnFrequency.value spnDecay.value spnSampleFrames.value chkMatchVelocity.checked spnBakeThreshold.value spnKeyStep.value
+                            SpringKeyUI.bakeNodeRange node chkPosition.checked chkRotation.checked chkScale.checked startTime endTime spnAmplitude.value spnFrequency.value spnDecay.value spnSampleFrames.value chkMatchVelocity.checked chkBounce.checked spnBakeThreshold.value spnKeyStep.value
                         )
                     )
                 )

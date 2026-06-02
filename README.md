@@ -5,7 +5,7 @@ Sparse spring/elastic key baker for 3ds Max transform animation.
 ## What it does
 
 `SpringKey.ms` opens a compact rollout that bakes an After Effects-style elastic
-spring response onto selected Position, Rotation, and/or Scale tracks.
+spring or bounce response onto selected Position, Rotation, and/or Scale tracks.
 
 The script estimates incoming velocity at the selected source key, then adds a
 damped sine response after that key. It creates only the spring keys it needs,
@@ -31,7 +31,7 @@ controllers from the UI.
 3. Select at least two keys on the enabled transform tracks.
 4. Choose which tracks to bake: Position, Rotation, and/or Scale.
 5. Adjust the Elastic and Sparse Bake settings.
-6. Click `Bake Spring To Keys`.
+6. Click `Bake Spring/Bounce To Keys`.
 
 SpringKey uses the selected key range as the source interval. The spring is baked
 after the selected range, and existing baked keys after that range are cleared on
@@ -56,6 +56,9 @@ the enabled tracks before new keys are written.
   frames.
 - `Match incoming speed`: scales the spring response so it follows the incoming
   velocity more closely. Enabled by default.
+- `Bounce`: uses a one-sided bounce response instead of a two-sided spring
+  oscillation. It uses the same Amplitude, Frequency, Decay, Velocity sample,
+  and Match incoming speed settings.
 
 ### Sparse Bake
 
@@ -65,8 +68,8 @@ the enabled tracks before new keys are written.
   damped motion becomes small enough. SpringKey fades the final tail section to
   a settle key with the same value as the last selected source key. Lower values
   keep more tail keys.
-- `Bake Spring To Keys`: bakes the spring result to keys on the selected nodes
-  and enabled tracks.
+- `Bake Spring/Bounce To Keys`: bakes the spring or bounce result to keys on the
+  selected nodes and enabled tracks.
 - `Select at least two keys.`: reminder label. The bake requires a selected key
   range on the enabled tracks.
 
