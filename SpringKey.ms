@@ -1199,86 +1199,6 @@ struct SpringKeyTool
         result
     ),
 
-    fn getControllerKey ctrl keyIndex =
-    (
-        local result = undefined
-        try(result = ctrl.keys[keyIndex])catch()
-        if result == undefined do try(result = getKey ctrl keyIndex)catch()
-        result
-    ),
-
-    fn valueSlope valueA valueB timeA timeB =
-    (
-        local frameDelta = ((timeB as float) - (timeA as float)) / TicksPerFrame
-        if (abs frameDelta) < 0.0001 then
-        (
-            valueB - valueB
-        )
-        else
-        (
-            (valueB - valueA) / frameDelta
-        )
-    ),
-
-    fn setImpactOutgoingTangentIn ctrl impactTime =
-    (
-        try
-        (
-            local keyCount = numKeys ctrl
-            if keyCount > 1 do
-            (
-                local impactIndex = undefined
-                for i = 1 to keyCount while impactIndex == undefined do
-                (
-                    if (abs (((getKeyTime ctrl i) as float) - (impactTime as float))) <= 0.5 do impactIndex = i
-                )
-
-                if impactIndex != undefined and impactIndex > 1 do
-                (
-                    local prevKey = getControllerKey ctrl (impactIndex - 1)
-                    local impactKey = getControllerKey ctrl impactIndex
-                    if prevKey != undefined and impactKey != undefined do
-                    (
-                        local slope = valueSlope prevKey.value impactKey.value prevKey.time impactKey.time
-                        try(impactKey.outTangentType = #custom)catch()
-                        try(impactKey.outTangent = slope)catch()
-                        try(impactKey.outTangentLength = 0.333)catch()
-                    )
-                )
-            )
-        )
-        catch()
-
-        try
-        (
-            for i = 1 to ctrl.numSubs do
-            (
-                try
-                (
-                    local subAnim = ctrl[i]
-                    try(setImpactOutgoingTangentIn subAnim impactTime)catch()
-                    if subAnim.controller != undefined do setImpactOutgoingTangentIn subAnim.controller impactTime
-                )
-                catch()
-            )
-        )
-        catch()
-    ),
-
-    fn restoreImpactOutgoingTangents node doPosition doRotation doScale impactTime =
-    (
-        if doPosition do try(setImpactOutgoingTangentIn node.pos.controller impactTime)catch()
-        if doRotation do
-        (
-            local rotCtrl = node.rotation.controller
-            try(setImpactOutgoingTangentIn rotCtrl impactTime)catch()
-            try(setImpactOutgoingTangentIn rotCtrl[1].controller impactTime)catch()
-            try(setImpactOutgoingTangentIn rotCtrl[2].controller impactTime)catch()
-            try(setImpactOutgoingTangentIn rotCtrl[3].controller impactTime)catch()
-        )
-        if doScale do try(setImpactOutgoingTangentIn node.scale.controller impactTime)catch()
-    ),
-
     fn tailFadeMultiplier evalTime fadeStartTime settleTime =
     (
         if fadeStartTime == undefined or settleTime == undefined then
@@ -1506,7 +1426,6 @@ struct SpringKeyTool
         if doPosition do bakePositionTrack node sourceNode times endTime amp freq decay sample matchVelocity bounceMode fadeStartTime settleTime
         if doRotation do bakeRotationTrack node sourceNode times endTime amp freq decay sample matchVelocity bounceMode fadeStartTime settleTime
         if doScale do bakeScaleTrack node sourceNode times endTime amp freq decay sample matchVelocity bounceMode fadeStartTime settleTime
-        restoreImpactOutgoingTangents node doPosition doRotation doScale endTime
 
         try(delete sourceNode)catch()
     ),
