@@ -9,8 +9,8 @@ spring or bounce response onto selected Position, Rotation, and/or Scale tracks.
 
 The script estimates incoming velocity at the selected source key, then adds a
 damped elastic response after that key. It bakes sparse zero/contact keys and
-uses custom tangents to shape the arcs instead of adding peak keys or baking
-every frame.
+uses tangents to shape the arcs instead of adding peak keys or baking every
+frame.
 
 SpringKey bakes transform controller values in local space, so linked objects
 keep their animation relative to animated parents.
