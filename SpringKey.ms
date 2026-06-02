@@ -1,9 +1,9 @@
 /*
     SpringKey
-    Live, non-baked spring/elastic animation controllers for 3ds Max.
+    Sparse spring/elastic key generator for 3ds Max.
 
-    Run this file, then use the SpringKey rollout to apply Position,
-    Rotation, and/or Scale spring controllers to selected nodes.
+    Run this file, then use the SpringKey rollout to create Position,
+    Rotation, and/or Scale spring or bounce keys on selected nodes.
 */
 
 global SpringKey
@@ -1160,7 +1160,7 @@ struct SpringKeyTool
     fn buildRangeBakeTimes startTime endTime freq decay threshold =
     (
         local times = #()
-        SpringKey.logText ("Bake range start: " + (startTime as string) + ", end: " + (endTime as string) + ", animation end: " + (animationRange.end as string))
+        SpringKey.logText ("Create key range start: " + (startTime as string) + ", end: " + (endTime as string) + ", animation end: " + (animationRange.end as string))
         addSpringEventTimes times #(endTime) endTime freq decay animationRange.end threshold
         local settleTimes = getSpringSettleTimes endTime freq decay animationRange.end threshold
         if settleTimes != undefined do
@@ -1476,7 +1476,7 @@ struct SpringKeyTool
             for item in values do at time item[1]
             (
                 local value = item[2]
-                SpringKey.logText ("Bake Local Position " + (item[1] as string) + " = " + (value as string))
+                SpringKey.logText ("Create Local Position key " + (item[1] as string) + " = " + (value as string))
                 posCtrl.value = value
             )
         )
@@ -1526,7 +1526,7 @@ struct SpringKeyTool
         local rotCtrl = node.rotation.controller
         if ((classOf rotCtrl as string) != "Euler_XYZ") then
         (
-            messageBox "Rotation bake currently requires an Euler_XYZ rotation controller to preserve 360+ spin." title:"SpringKey"
+            messageBox "Rotation key creation currently requires an Euler_XYZ rotation controller to preserve 360+ spin." title:"SpringKey"
         )
         else
         (
@@ -1538,7 +1538,7 @@ struct SpringKeyTool
                 for item in values do at time item[1]
                 (
                     local value = item[2]
-                    SpringKey.logText ("Bake Rotation " + (item[1] as string) + " = " + (value as string))
+                    SpringKey.logText ("Create Rotation key " + (item[1] as string) + " = " + (value as string))
                     try(rotCtrl[1].controller.value = value.x)catch()
                     try(rotCtrl[2].controller.value = value.y)catch()
                     try(rotCtrl[3].controller.value = value.z)catch()
@@ -1558,7 +1558,7 @@ struct SpringKeyTool
             for item in values do at time item[1]
             (
                 local value = item[2]
-                SpringKey.logText ("Bake Local Scale " + (item[1] as string) + " = " + (value as string))
+                SpringKey.logText ("Create Local Scale key " + (item[1] as string) + " = " + (value as string))
                 scaleCtrl.value = value
             )
         )
@@ -1584,17 +1584,17 @@ struct SpringKeyTool
         local fadeStartTime = if settleTimes != undefined then settleTimes[1] else undefined
         local settleTime = if settleTimes != undefined then quantizeTimeToStep settleTimes[2] keyStep else undefined
         local times = buildRangeBakeTimes startTime endTime freq decay threshold
-        SpringKey.logText ("Bake raw key count: " + (times.count as string) + ", key step: " + (keyStep as string))
+        SpringKey.logText ("Create raw key count: " + (times.count as string) + ", key step: " + (keyStep as string))
         times = quantizeTimes times keyStep
         if settleTime != undefined and ((settleTime as float) - (endTime as float)) > 0.5 do addUniqueTime times settleTime
         times = keepTimesAfter times endTime
         sort times
-        if settleTime != undefined do SpringKey.logText ("Bake settle key: " + (settleTime as string))
-        SpringKey.logText ("Bake node: " + node.name + ", key count: " + (times.count as string))
+        if settleTime != undefined do SpringKey.logText ("Create settle key: " + (settleTime as string))
+        SpringKey.logText ("Create keys on node: " + node.name + ", key count: " + (times.count as string))
         if times.count > 0 do
         (
-            SpringKey.logText ("Bake first time: " + (times[1] as string))
-            SpringKey.logText ("Bake last time: " + (times[times.count] as string))
+            SpringKey.logText ("Create first key time: " + (times[1] as string))
+            SpringKey.logText ("Create last key time: " + (times[times.count] as string))
         )
 
         if doPosition do bakePositionTrack node sourceNode times endTime amp freq decay sample matchVelocity bounceMode fadeStartTime settleTime
@@ -1722,9 +1722,9 @@ rollout SpringKey_Rollout "SpringKey" width:248
 (
     group "Tracks"
     (
-        checkbox chkPosition "Position" checked:true across:3 tooltip:"Bake the spring result onto the selected object's Position track."
-        checkbox chkRotation "Rotation" checked:true tooltip:"Bake the spring result onto the selected object's Rotation track."
-        checkbox chkScale "Scale" checked:false tooltip:"Bake the spring result onto the selected object's Scale track."
+        checkbox chkPosition "Position" checked:true across:3 tooltip:"Create spring or bounce keys on the selected object's Position track."
+        checkbox chkRotation "Rotation" checked:true tooltip:"Create spring or bounce keys on the selected object's Rotation track."
+        checkbox chkScale "Scale" checked:false tooltip:"Create spring or bounce keys on the selected object's Scale track."
     )
 
     group "Elastic"
@@ -1738,11 +1738,11 @@ rollout SpringKey_Rollout "SpringKey" width:248
         checkbox chkAutoSpringImpact "Auto spring impact tangent" checked:false align:#left tooltip:"Spring only: set the selected impact key to Auto tangents so it behaves like the main generated spring keys. Leave off to preserve the original animation key."
     )
 
-    group "Sparse Bake"
+    group "Generated Keys"
     (
-        spinner spnKeyStep "Key step" range:[0.0,1000.0,1.0] type:#float scale:0.1 fieldwidth:72 align:#right tooltip:"Snap generated bake keys to this frame interval. 1.0 means whole frames; 2.0 means every 2 frames; 0 disables snapping."
+        spinner spnKeyStep "Key step" range:[0.0,1000.0,1.0] type:#float scale:0.1 fieldwidth:72 align:#right tooltip:"Snap generated keys to this frame interval. 1.0 means whole frames; 2.0 means every 2 frames; 0 disables snapping."
         spinner spnBakeThreshold "Stop threshold" range:[0.0001,1.0,0.01] type:#float scale:0.001 fieldwidth:72 align:#right tooltip:"Start ending the spring tail once the damped response falls below this level, then fade to a final base-value settle key. Lower values keep a longer tail."
-        button btnBake "Bake Spring/Bounce To Keys" width:214 height:28 tooltip:"Bake the spring or bounce result after the last selected key on the enabled tracks."
+        button btnBake "Create Spring/Bounce Keys" width:214 height:28 tooltip:"Create spring or bounce keys after the last selected key on the enabled tracks."
         label lblSelectedKeys "Select an impact key." align:#center tooltip:"SpringKey uses the last selected key on the enabled tracks as the impact key."
     )
 
@@ -1750,12 +1750,12 @@ rollout SpringKey_Rollout "SpringKey" width:248
 
     group "Logging"
     (
-        checkbox chkEnableLog "Enable Log" checked:false align:#left tooltip:"Write debug and bake details to SpringKey_debug.log next to this script."
+        checkbox chkEnableLog "Enable Log" checked:false align:#left tooltip:"Write debug and key creation details to SpringKey_debug.log next to this script."
         button btnClearLog "Clear Log File" width:214 height:22 tooltip:"Clear SpringKey_debug.log and write a fresh header."
         label lblLogPath "SpringKey_debug.log" align:#center tooltip:"The log file is written next to the loaded SpringKey.ms file."
     )
 
-    label lblInfo "Sparse baked keys only." align:#center tooltip:"This rollout creates baked keys instead of leaving live SpringKey controllers on the object."
+    label lblInfo "Sparse generated keys only." align:#center tooltip:"This rollout writes animation keys directly instead of leaving live SpringKey controllers on the object."
 
     on chkEnableLog changed state do
     (
@@ -1785,8 +1785,8 @@ rollout SpringKey_Rollout "SpringKey" width:248
             local jobs = SpringKeyUI.collectBakeJobs selection chkPosition.checked chkRotation.checked chkScale.checked
             if jobs.count == 0 then
             (
-                SpringKey.logText "Bake skipped: no selected impact key on enabled tracks."
-                messageBox "Select an impact key on the enabled tracks before baking." title:"SpringKey"
+                SpringKey.logText "Key creation skipped: no selected impact key on enabled tracks."
+                messageBox "Select an impact key on the enabled tracks before creating keys." title:"SpringKey"
             )
             else
             (
@@ -1794,7 +1794,7 @@ rollout SpringKey_Rollout "SpringKey" width:248
             local oldAnimate = animateMode
             local setupTime = animationRange.start
 
-            undo "Bake SpringKey" on
+            undo "Create SpringKey Keys" on
             (
                 try
                 (
