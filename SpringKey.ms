@@ -1234,6 +1234,37 @@ struct SpringKeyTool
         result
     ),
 
+    fn buildMainBakeTimes keyTime freq decay rangeEnd threshold keyStep =
+    (
+        local times = #()
+        local f = freq / 30.0
+        local d = decay / 10.0
+        local maxDt = SpringKey.secondsFromTimeValue (rangeEnd - keyTime)
+
+        if f > 0.0001 and maxDt > 0.0 do
+        (
+            local decayLimit = maxDt
+            if d > 0.0001 do
+            (
+                local thresholdLimit = (log (1.0 / threshold)) / d
+                if thresholdLimit < decayLimit do decayLimit = thresholdLimit
+            )
+
+            local halfPeriod = 1.0 / (2.0 * f)
+            local n = 1
+            while (n * halfPeriod) <= decayLimit do
+            (
+                local dt = n * halfPeriod
+                addUniqueTime times (quantizeTimeToStep (keyTime + (dt * frameRate)) keyStep)
+                n += 1
+            )
+        )
+
+        times = keepTimesAfter times keyTime
+        sort times
+        times
+    ),
+
     fn buildPeakBakeTimes keyTime freq decay rangeEnd threshold keyStep =
     (
         local times = #()
@@ -1274,6 +1305,17 @@ struct SpringKeyTool
             if (abs ((keyTime as float) - (t as float))) <= toleranceTicks do matches = true
         )
         matches
+    ),
+
+    fn removeTimesMatching times excludedTimes toleranceTicks =
+    (
+        local result = #()
+        for t in times do
+        (
+            if not (keyTimeMatchesAny t excludedTimes toleranceTicks) do addUniqueTime result t
+        )
+        sort result
+        result
     ),
 
     fn setKeyTangentType key tangentType =
@@ -1692,7 +1734,7 @@ struct SpringKeyTool
         changed
     ),
 
-    fn setGeneratedTangentsIn ctrl impactTime peakTimes mainTangentType peakTangentType =
+    fn setGeneratedTangentsIn ctrl impactTime peakTimes mainTimes mainTangentType peakTangentType =
     (
         try
         (
@@ -1705,7 +1747,15 @@ struct SpringKeyTool
                     local key = getControllerKey ctrl i
                     if key != undefined do
                     (
-                        local tangentType = if keyTimeMatchesAny keyTime peakTimes 0.5 then peakTangentType else mainTangentType
+                        local tangentType = #auto
+                        if keyTimeMatchesAny keyTime peakTimes 0.5 then
+                        (
+                            tangentType = peakTangentType
+                        )
+                        else if keyTimeMatchesAny keyTime mainTimes 0.5 then
+                        (
+                            tangentType = mainTangentType
+                        )
                         setKeyTangentType key tangentType
                     )
                 )
@@ -1720,8 +1770,8 @@ struct SpringKeyTool
                 try
                 (
                     local subAnim = ctrl[i]
-                    try(setGeneratedTangentsIn subAnim impactTime peakTimes mainTangentType peakTangentType)catch()
-                    if subAnim.controller != undefined do setGeneratedTangentsIn subAnim.controller impactTime peakTimes mainTangentType peakTangentType
+                    try(setGeneratedTangentsIn subAnim impactTime peakTimes mainTimes mainTangentType peakTangentType)catch()
+                    if subAnim.controller != undefined do setGeneratedTangentsIn subAnim.controller impactTime peakTimes mainTimes mainTangentType peakTangentType
                 )
                 catch()
             )
@@ -1729,18 +1779,18 @@ struct SpringKeyTool
         catch()
     ),
 
-    fn setGeneratedTangents node doPosition doRotation doScale impactTime peakTimes mainTangentType peakTangentType =
+    fn setGeneratedTangents node doPosition doRotation doScale impactTime peakTimes mainTimes mainTangentType peakTangentType =
     (
-        if doPosition do try(setGeneratedTangentsIn node.pos.controller impactTime peakTimes mainTangentType peakTangentType)catch()
+        if doPosition do try(setGeneratedTangentsIn node.pos.controller impactTime peakTimes mainTimes mainTangentType peakTangentType)catch()
         if doRotation do
         (
             local rotCtrl = node.rotation.controller
-            try(setGeneratedTangentsIn rotCtrl impactTime peakTimes mainTangentType peakTangentType)catch()
-            try(setGeneratedTangentsIn rotCtrl[1].controller impactTime peakTimes mainTangentType peakTangentType)catch()
-            try(setGeneratedTangentsIn rotCtrl[2].controller impactTime peakTimes mainTangentType peakTangentType)catch()
-            try(setGeneratedTangentsIn rotCtrl[3].controller impactTime peakTimes mainTangentType peakTangentType)catch()
+            try(setGeneratedTangentsIn rotCtrl impactTime peakTimes mainTimes mainTangentType peakTangentType)catch()
+            try(setGeneratedTangentsIn rotCtrl[1].controller impactTime peakTimes mainTimes mainTangentType peakTangentType)catch()
+            try(setGeneratedTangentsIn rotCtrl[2].controller impactTime peakTimes mainTimes mainTangentType peakTangentType)catch()
+            try(setGeneratedTangentsIn rotCtrl[3].controller impactTime peakTimes mainTimes mainTangentType peakTangentType)catch()
         )
-        if doScale do try(setGeneratedTangentsIn node.scale.controller impactTime peakTimes mainTangentType peakTangentType)catch()
+        if doScale do try(setGeneratedTangentsIn node.scale.controller impactTime peakTimes mainTimes mainTangentType peakTangentType)catch()
     ),
 
     fn tailFadeMultiplier evalTime fadeStartTime settleTime =
@@ -1772,12 +1822,12 @@ struct SpringKeyTool
         )
     ),
 
-    fn springPoint3FromRangeAt baseCtrl evalTime impactTime amp freq decay sampleFrames matchVelocity bounceMode fadeStartTime settleTime =
+    fn springPoint3FromRangeAt baseCtrl evalTime impactTime amp freq decay sampleFrames matchVelocity bounceMode fadeStartTime settleTime mainTimes =
     (
         local baseTime = if evalTime <= impactTime then evalTime else impactTime
         local baseValue = at time baseTime baseCtrl.value
 
-        if evalTime <= impactTime then
+        if evalTime <= impactTime or keyTimeMatchesAny evalTime mainTimes 0.5 then
         (
             baseValue
         )
@@ -1802,7 +1852,7 @@ struct SpringKeyTool
         )
     ),
 
-    fn springEulerFromRangeAt baseCtrl evalTime impactTime amp freq decay sampleFrames matchVelocity bounceMode fadeStartTime settleTime =
+    fn springEulerFromRangeAt baseCtrl evalTime impactTime amp freq decay sampleFrames matchVelocity bounceMode fadeStartTime settleTime mainTimes =
     (
         local baseTime = if evalTime <= impactTime then evalTime else impactTime
         local baseEuler = SpringKey.getEulerAxisValues baseCtrl baseTime
@@ -1811,7 +1861,7 @@ struct SpringKeyTool
         (
             [0,0,0]
         )
-        else if evalTime <= impactTime then
+        else if evalTime <= impactTime or keyTimeMatchesAny evalTime mainTimes 0.5 then
         (
             baseEuler
         )
@@ -1836,10 +1886,10 @@ struct SpringKeyTool
         )
     ),
 
-    fn bakePositionTrack node sourceNode times impactTime amp freq decay sample matchVelocity bounceMode fadeStartTime settleTime =
+    fn bakePositionTrack node sourceNode times impactTime amp freq decay sample matchVelocity bounceMode fadeStartTime settleTime mainTimes =
     (
         local values = #()
-        for t in times do append values #(t, springPoint3FromRangeAt sourceNode.pos.controller t impactTime amp freq decay sample matchVelocity bounceMode fadeStartTime settleTime)
+        for t in times do append values #(t, springPoint3FromRangeAt sourceNode.pos.controller t impactTime amp freq decay sample matchVelocity bounceMode fadeStartTime settleTime mainTimes)
         local posCtrl = node.pos.controller
 
         animate on
@@ -1892,7 +1942,7 @@ struct SpringKeyTool
         if doScale do try(deleteKeysAfterTimeIn node.scale.controller cutoffTime)catch()
     ),
 
-    fn bakeRotationTrack node sourceNode times impactTime amp freq decay sample matchVelocity bounceMode fadeStartTime settleTime =
+    fn bakeRotationTrack node sourceNode times impactTime amp freq decay sample matchVelocity bounceMode fadeStartTime settleTime mainTimes =
     (
         local rotCtrl = node.rotation.controller
         if ((classOf rotCtrl as string) != "Euler_XYZ") then
@@ -1902,7 +1952,7 @@ struct SpringKeyTool
         else
         (
             local values = #()
-            for t in times do append values #(t, springEulerFromRangeAt sourceNode.rotation.controller t impactTime amp freq decay sample matchVelocity bounceMode fadeStartTime settleTime)
+            for t in times do append values #(t, springEulerFromRangeAt sourceNode.rotation.controller t impactTime amp freq decay sample matchVelocity bounceMode fadeStartTime settleTime mainTimes)
 
             animate on
             (
@@ -1918,10 +1968,10 @@ struct SpringKeyTool
         )
     ),
 
-    fn bakeScaleTrack node sourceNode times impactTime amp freq decay sample matchVelocity bounceMode fadeStartTime settleTime allowNegativeScale =
+    fn bakeScaleTrack node sourceNode times impactTime amp freq decay sample matchVelocity bounceMode fadeStartTime settleTime mainTimes allowNegativeScale =
     (
         local values = #()
-        for t in times do append values #(t, clampScaleValue (springPoint3FromRangeAt sourceNode.scale.controller t impactTime amp freq decay sample matchVelocity bounceMode fadeStartTime settleTime) allowNegativeScale)
+        for t in times do append values #(t, clampScaleValue (springPoint3FromRangeAt sourceNode.scale.controller t impactTime amp freq decay sample matchVelocity bounceMode fadeStartTime settleTime mainTimes) allowNegativeScale)
         local scaleCtrl = node.scale.controller
 
         animate on
@@ -1968,12 +2018,13 @@ struct SpringKeyTool
             SpringKey.logText ("Create last key time: " + (times[times.count] as string))
         )
 
-        if doPosition do bakePositionTrack node sourceNode times endTime amp freq decay sample matchVelocity bounceMode fadeStartTime settleTime
-        if doRotation do bakeRotationTrack node sourceNode times endTime amp freq decay sample matchVelocity bounceMode fadeStartTime settleTime
-        if doScale do bakeScaleTrack node sourceNode times endTime amp freq decay sample matchVelocity bounceMode fadeStartTime settleTime allowNegativeScale
         local peakTimes = buildPeakBakeTimes endTime freq decay animationRange.end threshold keyStep
+        local mainTimes = removeTimesMatching (buildMainBakeTimes endTime freq decay animationRange.end threshold keyStep) peakTimes 0.5
+        if doPosition do bakePositionTrack node sourceNode times endTime amp freq decay sample matchVelocity bounceMode fadeStartTime settleTime mainTimes
+        if doRotation do bakeRotationTrack node sourceNode times endTime amp freq decay sample matchVelocity bounceMode fadeStartTime settleTime mainTimes
+        if doScale do bakeScaleTrack node sourceNode times endTime amp freq decay sample matchVelocity bounceMode fadeStartTime settleTime mainTimes allowNegativeScale
         local mainTangentType = if bounceMode then #fast else #auto
-        setGeneratedTangents node doPosition doRotation doScale endTime peakTimes mainTangentType #slow
+        setGeneratedTangents node doPosition doRotation doScale endTime peakTimes mainTimes mainTangentType #slow
         if (autoSpringImpactTangent and (not bounceMode)) do setKeyTangentTypeAtTime node doPosition doRotation doScale endTime #auto
 
         try(delete sourceNode)catch()
