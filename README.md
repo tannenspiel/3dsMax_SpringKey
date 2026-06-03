@@ -98,16 +98,14 @@ key.
   following key. The default is `35`, meaning 35 percent of the time after the
   start key.
 - `Create Anticipation Key`: creates an opposite-direction key at the start of
-  an existing movement. Select the
-  first key of the movement, or move the time slider to that key if 3ds Max does
-  not expose the key selection to the script. If neither is available, SpringKey
-  falls back to the first key on each enabled track. It finds the next key on the
-  same enabled track, computes the movement vector from the start key to that
-  following key, and creates a new key between them in the opposite direction.
-  The start key and the new anticipation key are set to Auto tangents.
+  an existing movement. Select the first key of the movement explicitly.
+  SpringKey finds the next key on the same enabled track, computes the movement
+  vector from the start key to that following key, and creates a new key between
+  them in the opposite direction. The start key and the new anticipation key are
+  set to Auto tangents.
 - `Select a start key.`: reminder label. The Anticipation tool requires a
-  selected start key, the time slider on a start key, or a first key with a
-  following key on the enabled tracks.
+  selected start key with a following key on the enabled tracks. It never runs
+  without an explicitly selected key.
 
 ### Debug
 
