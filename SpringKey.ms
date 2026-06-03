@@ -1371,7 +1371,7 @@ struct SpringKeyTool
                 local slope = tangentComponents[i]
                 if (abs slope) > 0.000001 do
                 (
-                    local lengthValue = (nextComponents[i] - startComponents[i]) / (slope * segmentFrames)
+                    local lengthValue = abs ((nextComponents[i] - startComponents[i]) / (slope * segmentFrames))
                     if lengthValue > 0.0 do
                     (
                         if targetLength == undefined or lengthValue > targetLength do targetLength = lengthValue
@@ -1381,6 +1381,25 @@ struct SpringKeyTool
         )
 
         targetLength
+    ),
+
+    fn getEstimatedIncomingTangent ctrl startTime nextTime =
+    (
+        local result = undefined
+        try
+        (
+            local sampleFrames = 0.1
+            local sampleTicks = sampleFrames * TicksPerFrame
+            local sampleTime = ((nextTime as float) - sampleTicks) as time
+            if sampleTime <= startTime do sampleTime = startTime
+
+            local sampleValue = at time sampleTime ctrl.value
+            local nextValue = at time nextTime ctrl.value
+            local frameDelta = ((nextTime as float) - (sampleTime as float)) / TicksPerFrame
+            if frameDelta > 0.0001 do result = (nextValue - sampleValue) / frameDelta
+        )
+        catch()
+        result
     ),
 
     fn findNextKeyIndexAfter ctrl startTime =
@@ -1461,11 +1480,17 @@ struct SpringKeyTool
             local nextValue = at time nextTime ctrl.value
             local inTangent = undefined
             try(inTangent = nextKey.inTangent)catch()
+            if inTangent == undefined do inTangent = getEstimatedIncomingTangent ctrl startTime nextTime
 
             if startKey != undefined and nextKey != undefined and inTangent != undefined do
             (
                 local segmentFrames = ((nextTime as float) - (startTime as float)) / TicksPerFrame
                 local targetLength = getAnticipationLength startValue nextValue inTangent segmentFrames
+                if targetLength == undefined do
+                (
+                    inTangent = getEstimatedIncomingTangent ctrl startTime nextTime
+                    if inTangent != undefined do targetLength = getAnticipationLength startValue nextValue inTangent segmentFrames
+                )
                 if targetLength != undefined do
                 (
                     setKeyTangentType startKey #auto
