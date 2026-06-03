@@ -59,8 +59,12 @@ key.
 ### Elastic
 
 - `Amplitude`: AE-style spring amplitude. Internally divided by `200`.
-- `Frequency`: AE-style spring frequency. Internally divided by `30`.
-- `Decay`: AE-style spring decay. Internally divided by `10`.
+- `Frequency`: AE-style base elastic frequency. Internally divided by `30`.
+  SpringKey then applies damping, so higher `Decay` lowers the effective spring
+  frequency.
+- `Decay`: AE-style spring decay. Internally divided by `10`. Higher values
+  reduce amplitude sooner, shorten the tail, lower the effective spring
+  frequency, and make Bounce intervals compress faster.
 - `Velocity sample (frames)`: how far before the impact key SpringKey samples
   the original animation to estimate incoming velocity. The default is `0.1`
   frames.
@@ -69,9 +73,9 @@ key.
   keys use Slow tangents and generated main keys use Auto tangents.
 - `Bounce`: uses a one-sided bounce response opposite the incoming motion
   instead of a two-sided spring oscillation. It uses the same Amplitude,
-  Frequency, Decay, Velocity sample, and Match incoming speed settings. For
-  bounce keys, generated peak keys use Slow tangents and generated main keys
-  use Fast tangents.
+  Frequency, Decay, Velocity sample, and Match incoming speed settings. Bounce
+  contact/return intervals get shorter over time. For bounce keys, generated
+  peak keys use Slow tangents and generated main keys use Fast tangents.
 - `Auto spring impact tangent`: spring only. When enabled, the selected impact
   key is set to Auto tangents so it matches the generated main spring keys.
   Disabled by default to preserve the original source key.

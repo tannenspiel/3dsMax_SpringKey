@@ -84,6 +84,64 @@ struct SpringKeyCore
         value * pi / 180.0
     ),
 
+    fn clampFloat value minValue maxValue =
+    (
+        local result = value
+        if result < minValue do result = minValue
+        if result > maxValue do result = maxValue
+        result
+    ),
+
+    fn elasticDampedFrequency freq decay =
+    (
+        local naturalFrequency = freq / 30.0
+        local dampingRate = decay / 10.0
+        if naturalFrequency <= 0.0001 then
+        (
+            0.0
+        )
+        else
+        (
+            local naturalAngular = 2.0 * pi * naturalFrequency
+            local dampedAngularSq = (naturalAngular * naturalAngular) - (dampingRate * dampingRate)
+            if dampedAngularSq <= 0.000001 then 0.0 else ((sqrt dampedAngularSq) / (2.0 * pi))
+        )
+    ),
+
+    fn bounceIntervalRatio decayRate intervalSeconds =
+    (
+        if decayRate <= 0.0001 then
+        (
+            1.0
+        )
+        else
+        (
+            clampFloat (exp (-(decayRate * intervalSeconds) * 0.5)) 0.15 0.98
+        )
+    ),
+
+    fn bouncePhaseAtTime freq decay dt =
+    (
+        local f = SpringKey.elasticDampedFrequency freq decay
+        if f <= 0.0001 then
+        (
+            0.0
+        )
+        else
+        (
+            local d = decay / 10.0
+            local interval = 1.0 / (2.0 * f)
+            local elapsed = dt
+            local guard = 0
+            while ((elapsed > interval) and (guard < 1000)) do
+            (
+                elapsed -= interval
+                interval *= SpringKey.bounceIntervalRatio d interval
+                guard += 1
+            )
+            clampFloat (elapsed / interval) 0.0 1.0
+        )
+    ),
 
     fn elasticMultiplier amp freq decay dt matchVelocity bounceMode =
     (
@@ -94,10 +152,22 @@ struct SpringKeyCore
         else
         (
             local a = amp / 200.0
-            local f = freq / 30.0
+            local f = elasticDampedFrequency freq decay
             local d = decay / 10.0
-            local wave = (sin (f * dt * 360.0)) / (exp (d * dt))
-            if bounceMode do wave = -(abs wave)
+            local wave = 0.0
+
+            if f > 0.0001 do
+            (
+                if bounceMode then
+                (
+                    local phase = bouncePhaseAtTime freq decay dt
+                    wave = -(sin (phase * 180.0)) / (exp (d * dt))
+                )
+                else
+                (
+                    wave = (sin (f * dt * 360.0)) / (exp (d * dt))
+                )
+            )
 
             if matchVelocity and f > 0.0001 then
             (
@@ -1087,12 +1157,11 @@ struct SpringKeyTool
         nextTime
     ),
 
-    fn addSpringEventTimes times keyTimes keyTime freq decay rangeEnd threshold =
+    fn addBounceEventTimes times keyTime freq decay rangeEnd threshold keyStep includeMain includePeak =
     (
-        local f = freq / 30.0
+        local f = SpringKey.elasticDampedFrequency freq decay
         local d = decay / 10.0
-        local segmentEnd = findNextSourceKeyTime keyTimes keyTime rangeEnd
-        local maxDt = SpringKey.secondsFromTimeValue (segmentEnd - keyTime)
+        local maxDt = SpringKey.secondsFromTimeValue (rangeEnd - keyTime)
 
         if f > 0.0001 and maxDt > 0.0 do
         (
@@ -1103,23 +1172,66 @@ struct SpringKeyTool
                 if thresholdLimit < decayLimit do decayLimit = thresholdLimit
             )
 
-            local halfPeriod = 1.0 / (2.0 * f)
-            local n = 0
-            while (n * halfPeriod) <= decayLimit do
+            local elapsed = 0.0
+            local interval = 1.0 / (2.0 * f)
+            local minInterval = (if keyStep > 0.0 then keyStep else 0.25) / frameRate
+            local guard = 0
+            while (((elapsed + interval) <= decayLimit) and ((interval >= minInterval) or (guard == 0)) and (guard < 1000)) do
             (
-                local dt = n * halfPeriod
-                if dt > 0.0 do addUniqueTime times (keyTime + (dt * frameRate))
-                n += 1
-            )
+                local peakDt = elapsed + (interval * 0.5)
+                local mainDt = elapsed + interval
+                if (includePeak and peakDt > 0.0) do addUniqueTime times (quantizeTimeToStep (keyTime + (peakDt * frameRate)) keyStep)
+                if (includeMain and mainDt > 0.0) do addUniqueTime times (quantizeTimeToStep (keyTime + (mainDt * frameRate)) keyStep)
 
-            local w = 2.0 * pi * f
-            local firstPeak = if d > 0.0001 then ((atan (w / d)) / (360.0 * f)) else (1.0 / (4.0 * f))
-            n = 0
-            while (firstPeak + (n / (2.0 * f))) <= decayLimit do
+                elapsed = mainDt
+                interval *= SpringKey.bounceIntervalRatio d interval
+                guard += 1
+            )
+        )
+
+        times
+    ),
+
+    fn addSpringEventTimes times keyTimes keyTime freq decay rangeEnd threshold keyStep bounceMode =
+    (
+        local f = SpringKey.elasticDampedFrequency freq decay
+        local d = decay / 10.0
+        local segmentEnd = findNextSourceKeyTime keyTimes keyTime rangeEnd
+        local maxDt = SpringKey.secondsFromTimeValue (segmentEnd - keyTime)
+
+        if f > 0.0001 and maxDt > 0.0 do
+        (
+            if bounceMode then
             (
-                local dt = firstPeak + (n / (2.0 * f))
-                if dt > 0.0 do addUniqueTime times (keyTime + (dt * frameRate))
-                n += 1
+                addBounceEventTimes times keyTime freq decay segmentEnd threshold keyStep true true
+            )
+            else
+            (
+                local decayLimit = maxDt
+                if d > 0.0001 do
+                (
+                    local thresholdLimit = (log (1.0 / threshold)) / d
+                    if thresholdLimit < decayLimit do decayLimit = thresholdLimit
+                )
+
+                local halfPeriod = 1.0 / (2.0 * f)
+                local n = 0
+                while (n * halfPeriod) <= decayLimit do
+                (
+                    local dt = n * halfPeriod
+                    if dt > 0.0 do addUniqueTime times (keyTime + (dt * frameRate))
+                    n += 1
+                )
+
+                local w = 2.0 * pi * f
+                local firstPeak = if d > 0.0001 then ((atan (w / d)) / (360.0 * f)) else (1.0 / (4.0 * f))
+                n = 0
+                while (firstPeak + (n / (2.0 * f))) <= decayLimit do
+                (
+                    local dt = firstPeak + (n / (2.0 * f))
+                    if dt > 0.0 do addUniqueTime times (keyTime + (dt * frameRate))
+                    n += 1
+                )
             )
         )
 
@@ -1128,7 +1240,7 @@ struct SpringKeyTool
 
     fn getSpringSettleTimes keyTime freq decay rangeEnd threshold =
     (
-        local f = freq / 30.0
+        local f = SpringKey.elasticDampedFrequency freq decay
         local d = decay / 10.0
         local maxDt = SpringKey.secondsFromTimeValue (rangeEnd - keyTime)
 
@@ -1175,17 +1287,17 @@ struct SpringKeyTool
         )
 
         sort allSourceKeys
-        if lastSourceKey != undefined do addSpringEventTimes times #(lastSourceKey) lastSourceKey freq decay rangeEnd threshold
+        if lastSourceKey != undefined do addSpringEventTimes times #(lastSourceKey) lastSourceKey freq decay rangeEnd threshold 0.0 false
 
         sort times
         times
     ),
 
-    fn buildRangeBakeTimes startTime endTime freq decay threshold =
+    fn buildRangeBakeTimes startTime endTime freq decay threshold keyStep bounceMode =
     (
         local times = #()
         SpringKey.logText ("Create key range start: " + (startTime as string) + ", end: " + (endTime as string) + ", animation end: " + (animationRange.end as string))
-        addSpringEventTimes times #(endTime) endTime freq decay animationRange.end threshold
+        addSpringEventTimes times #(endTime) endTime freq decay animationRange.end threshold keyStep bounceMode
         local settleTimes = getSpringSettleTimes endTime freq decay animationRange.end threshold
         if settleTimes != undefined do
         (
@@ -1234,29 +1346,36 @@ struct SpringKeyTool
         result
     ),
 
-    fn buildMainBakeTimes keyTime freq decay rangeEnd threshold keyStep =
+    fn buildMainBakeTimes keyTime freq decay rangeEnd threshold keyStep bounceMode =
     (
         local times = #()
-        local f = freq / 30.0
+        local f = SpringKey.elasticDampedFrequency freq decay
         local d = decay / 10.0
         local maxDt = SpringKey.secondsFromTimeValue (rangeEnd - keyTime)
 
         if f > 0.0001 and maxDt > 0.0 do
         (
-            local decayLimit = maxDt
-            if d > 0.0001 do
+            if bounceMode then
             (
-                local thresholdLimit = (log (1.0 / threshold)) / d
-                if thresholdLimit < decayLimit do decayLimit = thresholdLimit
+                addBounceEventTimes times keyTime freq decay rangeEnd threshold keyStep true false
             )
-
-            local halfPeriod = 1.0 / (2.0 * f)
-            local n = 1
-            while (n * halfPeriod) <= decayLimit do
+            else
             (
-                local dt = n * halfPeriod
-                addUniqueTime times (quantizeTimeToStep (keyTime + (dt * frameRate)) keyStep)
-                n += 1
+                local decayLimit = maxDt
+                if d > 0.0001 do
+                (
+                    local thresholdLimit = (log (1.0 / threshold)) / d
+                    if thresholdLimit < decayLimit do decayLimit = thresholdLimit
+                )
+
+                local halfPeriod = 1.0 / (2.0 * f)
+                local n = 1
+                while (n * halfPeriod) <= decayLimit do
+                (
+                    local dt = n * halfPeriod
+                    addUniqueTime times (quantizeTimeToStep (keyTime + (dt * frameRate)) keyStep)
+                    n += 1
+                )
             )
         )
 
@@ -1265,30 +1384,37 @@ struct SpringKeyTool
         times
     ),
 
-    fn buildPeakBakeTimes keyTime freq decay rangeEnd threshold keyStep =
+    fn buildPeakBakeTimes keyTime freq decay rangeEnd threshold keyStep bounceMode =
     (
         local times = #()
-        local f = freq / 30.0
+        local f = SpringKey.elasticDampedFrequency freq decay
         local d = decay / 10.0
         local maxDt = SpringKey.secondsFromTimeValue (rangeEnd - keyTime)
 
         if f > 0.0001 and maxDt > 0.0 do
         (
-            local decayLimit = maxDt
-            if d > 0.0001 do
+            if bounceMode then
             (
-                local thresholdLimit = (log (1.0 / threshold)) / d
-                if thresholdLimit < decayLimit do decayLimit = thresholdLimit
+                addBounceEventTimes times keyTime freq decay rangeEnd threshold keyStep false true
             )
-
-            local w = 2.0 * pi * f
-            local firstPeak = if d > 0.0001 then ((atan (w / d)) / (360.0 * f)) else (1.0 / (4.0 * f))
-            local n = 0
-            while (firstPeak + (n / (2.0 * f))) <= decayLimit do
+            else
             (
-                local dt = firstPeak + (n / (2.0 * f))
-                if dt > 0.0 do addUniqueTime times (quantizeTimeToStep (keyTime + (dt * frameRate)) keyStep)
-                n += 1
+                local decayLimit = maxDt
+                if d > 0.0001 do
+                (
+                    local thresholdLimit = (log (1.0 / threshold)) / d
+                    if thresholdLimit < decayLimit do decayLimit = thresholdLimit
+                )
+
+                local w = 2.0 * pi * f
+                local firstPeak = if d > 0.0001 then ((atan (w / d)) / (360.0 * f)) else (1.0 / (4.0 * f))
+                local n = 0
+                while (firstPeak + (n / (2.0 * f))) <= decayLimit do
+                (
+                    local dt = firstPeak + (n / (2.0 * f))
+                    if dt > 0.0 do addUniqueTime times (quantizeTimeToStep (keyTime + (dt * frameRate)) keyStep)
+                    n += 1
+                )
             )
         )
 
@@ -2004,7 +2130,7 @@ struct SpringKeyTool
         local settleTimes = getSpringSettleTimes endTime freq decay animationRange.end threshold
         local fadeStartTime = if settleTimes != undefined then settleTimes[1] else undefined
         local settleTime = if settleTimes != undefined then quantizeTimeToStep settleTimes[2] keyStep else undefined
-        local times = buildRangeBakeTimes startTime endTime freq decay threshold
+        local times = buildRangeBakeTimes startTime endTime freq decay threshold keyStep bounceMode
         SpringKey.logText ("Create raw key count: " + (times.count as string) + ", key step: " + (keyStep as string))
         times = quantizeTimes times keyStep
         if settleTime != undefined and ((settleTime as float) - (endTime as float)) > 0.5 do addUniqueTime times settleTime
@@ -2018,8 +2144,8 @@ struct SpringKeyTool
             SpringKey.logText ("Create last key time: " + (times[times.count] as string))
         )
 
-        local peakTimes = buildPeakBakeTimes endTime freq decay animationRange.end threshold keyStep
-        local mainTimes = removeTimesMatching (buildMainBakeTimes endTime freq decay animationRange.end threshold keyStep) peakTimes 0.5
+        local peakTimes = buildPeakBakeTimes endTime freq decay animationRange.end threshold keyStep bounceMode
+        local mainTimes = removeTimesMatching (buildMainBakeTimes endTime freq decay animationRange.end threshold keyStep bounceMode) peakTimes 0.5
         if doPosition do bakePositionTrack node sourceNode times endTime amp freq decay sample matchVelocity bounceMode fadeStartTime settleTime mainTimes
         if doRotation do bakeRotationTrack node sourceNode times endTime amp freq decay sample matchVelocity bounceMode fadeStartTime settleTime mainTimes
         if doScale do bakeScaleTrack node sourceNode times endTime amp freq decay sample matchVelocity bounceMode fadeStartTime settleTime mainTimes allowNegativeScale
@@ -2153,11 +2279,11 @@ rollout SpringKey_Rollout "SpringKey" width:248
     group "Elastic"
     (
         spinner spnAmplitude "Amplitude" range:[-10000.0,10000.0,100.0] type:#float fieldwidth:72 align:#right tooltip:"Controls the spring amount. Higher values create a larger overshoot; negative values invert the response."
-        spinner spnFrequency "Frequency" range:[0.0,10000.0,90.0] type:#float fieldwidth:72 align:#right tooltip:"Controls how fast the spring oscillates. Higher values add more waves over the same time."
-        spinner spnDecay "Decay" range:[0.0,10000.0,50.0] type:#float fieldwidth:72 align:#right tooltip:"Controls how quickly the spring fades out. Higher values stop the motion sooner."
+        spinner spnFrequency "Frequency" range:[0.0,10000.0,90.0] type:#float fieldwidth:72 align:#right tooltip:"Controls the base elastic speed. Decay lowers the effective spring frequency; higher Frequency still adds more waves."
+        spinner spnDecay "Decay" range:[0.0,10000.0,50.0] type:#float fieldwidth:72 align:#right tooltip:"Controls how quickly the motion fades. Higher values also reduce spring frequency and make bounce intervals compress faster."
         spinner spnSampleFrames "Velocity sample (frames)" range:[0.001,100.0,0.1] type:#float fieldwidth:72 align:#right tooltip:"How many frames before the impact key are sampled to estimate incoming velocity. Smaller values react to the immediate tangent; larger values average over a wider section."
         checkbox chkMatchVelocity "Match incoming speed" checked:true align:#left tooltip:"Scale the spring by the incoming velocity so faster animation produces a stronger overshoot. Turn off for a more fixed, amplitude-driven response."
-        checkbox chkBounce "Bounce" checked:false align:#left tooltip:"Use a one-sided bounce response opposite the incoming motion. Uses the same amplitude, frequency, decay, and velocity settings."
+        checkbox chkBounce "Bounce" checked:false align:#left tooltip:"Use a one-sided bounce response opposite the incoming motion. Bounce intervals compress over time as Decay removes energy."
         checkbox chkAutoSpringImpact "Auto spring impact tangent" checked:false align:#left tooltip:"Spring only: set the selected impact key to Auto tangents so it behaves like the main generated spring keys. Leave off to preserve the original animation key."
     )
 
