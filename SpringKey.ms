@@ -1370,6 +1370,30 @@ struct SpringKeyTool
         equal
     ),
 
+    fn clampScaleValue value allowNegativeScale =
+    (
+        if allowNegativeScale then
+        (
+            value
+        )
+        else
+        (
+            local result = value
+            try(if result < 0.0 do result = 0.0)catch()
+            if classOf value == Point3 do
+            (
+                local xValue = value.x
+                local yValue = value.y
+                local zValue = value.z
+                if xValue < 0.0 do xValue = 0.0
+                if yValue < 0.0 do yValue = 0.0
+                if zValue < 0.0 do zValue = 0.0
+                result = [xValue, yValue, zValue]
+            )
+            result
+        )
+    ),
+
     fn getAnticipationLength startValue nextValue inTangent segmentFrames =
     (
         local targetLength = undefined
@@ -1507,7 +1531,7 @@ struct SpringKeyTool
         result
     ),
 
-    fn createAnticipationFromKeyIndex ctrl startIndex amountPercent timePercent =
+    fn createAnticipationFromKeyIndex ctrl startIndex amountPercent timePercent allowNegativeScale =
     (
         local changed = 0
         local startTime = getKeyTime ctrl startIndex
@@ -1533,7 +1557,7 @@ struct SpringKeyTool
                         if timeRatio >= 1.0 do timeRatio = 0.99
 
                         local anticipationTime = startTime + ((intervalTicks * timeRatio) / TicksPerFrame)
-                        local anticipationValue = startValue - ((nextValue - startValue) * amount)
+                        local anticipationValue = clampScaleValue (startValue - ((nextValue - startValue) * amount)) allowNegativeScale
 
                         setKeyTangentType startKey #auto
                         local anticipationKey = undefined
@@ -1558,7 +1582,7 @@ struct SpringKeyTool
         changed
     ),
 
-    fn createAnticipationIn ctrl amountPercent timePercent =
+    fn createAnticipationIn ctrl amountPercent timePercent allowNegativeScale =
     (
         local changed = 0
 
@@ -1571,7 +1595,7 @@ struct SpringKeyTool
                 (
                     if isControllerKeySelected ctrl i do
                     (
-                        changed += createAnticipationFromKeyIndex ctrl i amountPercent timePercent
+                        changed += createAnticipationFromKeyIndex ctrl i amountPercent timePercent allowNegativeScale
                     )
                 )
             )
@@ -1585,8 +1609,8 @@ struct SpringKeyTool
                 try
                 (
                     local subAnim = ctrl[i]
-                    try(changed += createAnticipationIn subAnim amountPercent timePercent)catch()
-                    if subAnim.controller != undefined do changed += createAnticipationIn subAnim.controller amountPercent timePercent
+                    try(changed += createAnticipationIn subAnim amountPercent timePercent allowNegativeScale)catch()
+                    if subAnim.controller != undefined do changed += createAnticipationIn subAnim.controller amountPercent timePercent allowNegativeScale
                 )
                 catch()
             )
@@ -1596,7 +1620,7 @@ struct SpringKeyTool
         changed
     ),
 
-    fn createAnticipationAtTimeIn ctrl startTime amountPercent timePercent =
+    fn createAnticipationAtTimeIn ctrl startTime amountPercent timePercent allowNegativeScale =
     (
         local changed = 0
         try
@@ -1604,7 +1628,7 @@ struct SpringKeyTool
             if not (hasChildControllers ctrl) do
             (
                 local startIndex = findKeyIndexAtTime ctrl startTime
-                if startIndex != undefined do changed += createAnticipationFromKeyIndex ctrl startIndex amountPercent timePercent
+                if startIndex != undefined do changed += createAnticipationFromKeyIndex ctrl startIndex amountPercent timePercent allowNegativeScale
             )
         )
         catch()
@@ -1616,8 +1640,8 @@ struct SpringKeyTool
                 try
                 (
                     local subAnim = ctrl[i]
-                    try(changed += createAnticipationAtTimeIn subAnim startTime amountPercent timePercent)catch()
-                    if subAnim.controller != undefined do changed += createAnticipationAtTimeIn subAnim.controller startTime amountPercent timePercent
+                    try(changed += createAnticipationAtTimeIn subAnim startTime amountPercent timePercent allowNegativeScale)catch()
+                    if subAnim.controller != undefined do changed += createAnticipationAtTimeIn subAnim.controller startTime amountPercent timePercent allowNegativeScale
                 )
                 catch()
             )
@@ -1627,7 +1651,7 @@ struct SpringKeyTool
         changed
     ),
 
-    fn createAnticipationAtFirstKeyIn ctrl amountPercent timePercent =
+    fn createAnticipationAtFirstKeyIn ctrl amountPercent timePercent allowNegativeScale =
     (
         local changed = 0
         try
@@ -1635,7 +1659,7 @@ struct SpringKeyTool
             if not (hasChildControllers ctrl) do
             (
                 local startIndex = findFirstKeyIndex ctrl
-                if startIndex != undefined do changed += createAnticipationFromKeyIndex ctrl startIndex amountPercent timePercent
+                if startIndex != undefined do changed += createAnticipationFromKeyIndex ctrl startIndex amountPercent timePercent allowNegativeScale
             )
         )
         catch()
@@ -1647,8 +1671,8 @@ struct SpringKeyTool
                 try
                 (
                     local subAnim = ctrl[i]
-                    try(changed += createAnticipationAtFirstKeyIn subAnim amountPercent timePercent)catch()
-                    if subAnim.controller != undefined do changed += createAnticipationAtFirstKeyIn subAnim.controller amountPercent timePercent
+                    try(changed += createAnticipationAtFirstKeyIn subAnim amountPercent timePercent allowNegativeScale)catch()
+                    if subAnim.controller != undefined do changed += createAnticipationAtFirstKeyIn subAnim.controller amountPercent timePercent allowNegativeScale
                 )
                 catch()
             )
@@ -1658,73 +1682,73 @@ struct SpringKeyTool
         changed
     ),
 
-    fn createAnticipation node doPosition doRotation doScale amountPercent timePercent =
+    fn createAnticipation node doPosition doRotation doScale amountPercent timePercent allowNegativeScale =
     (
         local changed = 0
-        if doPosition do try(changed += createAnticipationIn node.pos.controller amountPercent timePercent)catch()
+        if doPosition do try(changed += createAnticipationIn node.pos.controller amountPercent timePercent true)catch()
         if doRotation do
         (
             local rotCtrl = node.rotation.controller
-            try(changed += createAnticipationIn rotCtrl amountPercent timePercent)catch()
+            try(changed += createAnticipationIn rotCtrl amountPercent timePercent true)catch()
         )
         if doScale do
         (
             local scaleBefore = changed
             local scaleCtrl = node.scale.controller
-            try(changed += createAnticipationIn scaleCtrl amountPercent timePercent)catch()
+            try(changed += createAnticipationIn scaleCtrl amountPercent timePercent allowNegativeScale)catch()
             if changed == scaleBefore do
             (
-                try(changed += createAnticipationIn scaleCtrl[1].controller amountPercent timePercent)catch()
-                try(changed += createAnticipationIn scaleCtrl[2].controller amountPercent timePercent)catch()
-                try(changed += createAnticipationIn scaleCtrl[3].controller amountPercent timePercent)catch()
+                try(changed += createAnticipationIn scaleCtrl[1].controller amountPercent timePercent allowNegativeScale)catch()
+                try(changed += createAnticipationIn scaleCtrl[2].controller amountPercent timePercent allowNegativeScale)catch()
+                try(changed += createAnticipationIn scaleCtrl[3].controller amountPercent timePercent allowNegativeScale)catch()
             )
         )
         changed
     ),
 
-    fn createAnticipationAtTime node doPosition doRotation doScale startTime amountPercent timePercent =
+    fn createAnticipationAtTime node doPosition doRotation doScale startTime amountPercent timePercent allowNegativeScale =
     (
         local changed = 0
-        if doPosition do try(changed += createAnticipationAtTimeIn node.pos.controller startTime amountPercent timePercent)catch()
+        if doPosition do try(changed += createAnticipationAtTimeIn node.pos.controller startTime amountPercent timePercent true)catch()
         if doRotation do
         (
             local rotCtrl = node.rotation.controller
-            try(changed += createAnticipationAtTimeIn rotCtrl startTime amountPercent timePercent)catch()
+            try(changed += createAnticipationAtTimeIn rotCtrl startTime amountPercent timePercent true)catch()
         )
         if doScale do
         (
             local scaleBefore = changed
             local scaleCtrl = node.scale.controller
-            try(changed += createAnticipationAtTimeIn scaleCtrl startTime amountPercent timePercent)catch()
+            try(changed += createAnticipationAtTimeIn scaleCtrl startTime amountPercent timePercent allowNegativeScale)catch()
             if changed == scaleBefore do
             (
-                try(changed += createAnticipationAtTimeIn scaleCtrl[1].controller startTime amountPercent timePercent)catch()
-                try(changed += createAnticipationAtTimeIn scaleCtrl[2].controller startTime amountPercent timePercent)catch()
-                try(changed += createAnticipationAtTimeIn scaleCtrl[3].controller startTime amountPercent timePercent)catch()
+                try(changed += createAnticipationAtTimeIn scaleCtrl[1].controller startTime amountPercent timePercent allowNegativeScale)catch()
+                try(changed += createAnticipationAtTimeIn scaleCtrl[2].controller startTime amountPercent timePercent allowNegativeScale)catch()
+                try(changed += createAnticipationAtTimeIn scaleCtrl[3].controller startTime amountPercent timePercent allowNegativeScale)catch()
             )
         )
         changed
     ),
 
-    fn createAnticipationAtFirstKey node doPosition doRotation doScale amountPercent timePercent =
+    fn createAnticipationAtFirstKey node doPosition doRotation doScale amountPercent timePercent allowNegativeScale =
     (
         local changed = 0
-        if doPosition do try(changed += createAnticipationAtFirstKeyIn node.pos.controller amountPercent timePercent)catch()
+        if doPosition do try(changed += createAnticipationAtFirstKeyIn node.pos.controller amountPercent timePercent true)catch()
         if doRotation do
         (
             local rotCtrl = node.rotation.controller
-            try(changed += createAnticipationAtFirstKeyIn rotCtrl amountPercent timePercent)catch()
+            try(changed += createAnticipationAtFirstKeyIn rotCtrl amountPercent timePercent true)catch()
         )
         if doScale do
         (
             local scaleBefore = changed
             local scaleCtrl = node.scale.controller
-            try(changed += createAnticipationAtFirstKeyIn scaleCtrl amountPercent timePercent)catch()
+            try(changed += createAnticipationAtFirstKeyIn scaleCtrl amountPercent timePercent allowNegativeScale)catch()
             if changed == scaleBefore do
             (
-                try(changed += createAnticipationAtFirstKeyIn scaleCtrl[1].controller amountPercent timePercent)catch()
-                try(changed += createAnticipationAtFirstKeyIn scaleCtrl[2].controller amountPercent timePercent)catch()
-                try(changed += createAnticipationAtFirstKeyIn scaleCtrl[3].controller amountPercent timePercent)catch()
+                try(changed += createAnticipationAtFirstKeyIn scaleCtrl[1].controller amountPercent timePercent allowNegativeScale)catch()
+                try(changed += createAnticipationAtFirstKeyIn scaleCtrl[2].controller amountPercent timePercent allowNegativeScale)catch()
+                try(changed += createAnticipationAtFirstKeyIn scaleCtrl[3].controller amountPercent timePercent allowNegativeScale)catch()
             )
         )
         changed
@@ -1956,10 +1980,10 @@ struct SpringKeyTool
         )
     ),
 
-    fn bakeScaleTrack node sourceNode times impactTime amp freq decay sample matchVelocity bounceMode fadeStartTime settleTime =
+    fn bakeScaleTrack node sourceNode times impactTime amp freq decay sample matchVelocity bounceMode fadeStartTime settleTime allowNegativeScale =
     (
         local values = #()
-        for t in times do append values #(t, springPoint3FromRangeAt sourceNode.scale.controller t impactTime amp freq decay sample matchVelocity bounceMode fadeStartTime settleTime)
+        for t in times do append values #(t, clampScaleValue (springPoint3FromRangeAt sourceNode.scale.controller t impactTime amp freq decay sample matchVelocity bounceMode fadeStartTime settleTime) allowNegativeScale)
         local scaleCtrl = node.scale.controller
 
         animate on
@@ -1973,7 +1997,7 @@ struct SpringKeyTool
         )
     ),
 
-    fn bakeNodeRange node doPosition doRotation doScale startTime endTime amp freq decay sample matchVelocity bounceMode threshold keyStep autoSpringImpactTangent =
+    fn bakeNodeRange node doPosition doRotation doScale startTime endTime amp freq decay sample matchVelocity bounceMode threshold keyStep autoSpringImpactTangent allowNegativeScale =
     (
         local sourceNode = point name:(uniqueName (node.name + "_SpringKey_BAKE_SRC")) size:20 box:false cross:true axistripod:true centermarker:true
         sourceNode.parent = node.parent
@@ -2008,7 +2032,7 @@ struct SpringKeyTool
 
         if doPosition do bakePositionTrack node sourceNode times endTime amp freq decay sample matchVelocity bounceMode fadeStartTime settleTime
         if doRotation do bakeRotationTrack node sourceNode times endTime amp freq decay sample matchVelocity bounceMode fadeStartTime settleTime
-        if doScale do bakeScaleTrack node sourceNode times endTime amp freq decay sample matchVelocity bounceMode fadeStartTime settleTime
+        if doScale do bakeScaleTrack node sourceNode times endTime amp freq decay sample matchVelocity bounceMode fadeStartTime settleTime allowNegativeScale
         local peakTimes = buildPeakBakeTimes endTime freq decay animationRange.end threshold keyStep
         local mainTangentType = if bounceMode then #fast else #auto
         setGeneratedTangents node doPosition doRotation doScale endTime peakTimes mainTangentType #slow
@@ -2022,7 +2046,7 @@ struct SpringKeyTool
         local startTime = animationRange.start
         local endTime = trackbar.getPreviousKeyTime()
         if endTime == undefined do endTime = animationRange.end
-        bakeNodeRange node doPosition doRotation doScale startTime endTime amp freq decay sample matchVelocity false threshold 1.0 false
+        bakeNodeRange node doPosition doRotation doScale startTime endTime amp freq decay sample matchVelocity false threshold 1.0 false false
     ),
 
     fn wrapPosition node amp freq decay sample matchVelocity =
@@ -2134,6 +2158,7 @@ rollout SpringKey_Rollout "SpringKey" width:248
         checkbox chkPosition "Position" checked:true across:3 tooltip:"Create spring or bounce keys on the selected object's Position track."
         checkbox chkRotation "Rotation" checked:true tooltip:"Create spring or bounce keys on the selected object's Rotation track."
         checkbox chkScale "Scale" checked:false tooltip:"Create spring or bounce keys on the selected object's Scale track."
+        checkbox chkAllowNegativeScale "Allow negative scale" checked:false align:#left tooltip:"Allow generated Scale keys to go below 0. Turn this on only when mirrored or inverted scale is intentional."
     )
 
     group "Elastic"
@@ -2227,7 +2252,7 @@ rollout SpringKey_Rollout "SpringKey" width:248
                             local endTime = selectedRange[2]
                             SpringKey.logText ("Using selected impact key on " + node.name + ": " + (endTime as string) + ", selected times: " + (selectedRange[3] as string))
                             local autoSpringImpactTangent = chkAutoSpringImpact.checked and (not chkBounce.checked)
-                            SpringKeyUI.bakeNodeRange node chkPosition.checked chkRotation.checked chkScale.checked startTime endTime spnAmplitude.value spnFrequency.value spnDecay.value spnSampleFrames.value chkMatchVelocity.checked chkBounce.checked spnBakeThreshold.value spnKeyStep.value autoSpringImpactTangent
+                            SpringKeyUI.bakeNodeRange node chkPosition.checked chkRotation.checked chkScale.checked startTime endTime spnAmplitude.value spnFrequency.value spnDecay.value spnSampleFrames.value chkMatchVelocity.checked chkBounce.checked spnBakeThreshold.value spnKeyStep.value autoSpringImpactTangent chkAllowNegativeScale.checked
                         )
                     )
                 )
@@ -2270,7 +2295,7 @@ rollout SpringKey_Rollout "SpringKey" width:248
                         local selectedRange = job[2]
                         local startTime = selectedRange[2]
                         SpringKey.logText ("Using selected anticipation start key on " + node.name + ": " + (startTime as string) + ", selected times: " + (selectedRange[3] as string))
-                        changed += SpringKeyUI.createAnticipationAtTime node chkPosition.checked chkRotation.checked chkScale.checked startTime anticipationAmount anticipationTiming
+                        changed += SpringKeyUI.createAnticipationAtTime node chkPosition.checked chkRotation.checked chkScale.checked startTime anticipationAmount anticipationTiming chkAllowNegativeScale.checked
                     )
                 )
 
@@ -2279,7 +2304,7 @@ rollout SpringKey_Rollout "SpringKey" width:248
                     for node in selection do
                     (
                         local before = changed
-                        changed += SpringKeyUI.createAnticipationAtTime node chkPosition.checked chkRotation.checked chkScale.checked currentTime anticipationAmount anticipationTiming
+                        changed += SpringKeyUI.createAnticipationAtTime node chkPosition.checked chkRotation.checked chkScale.checked currentTime anticipationAmount anticipationTiming chkAllowNegativeScale.checked
                         if changed > before do foundStartKey = true
                     )
                 )
@@ -2288,7 +2313,7 @@ rollout SpringKey_Rollout "SpringKey" width:248
                     for node in selection do
                     (
                         local before = changed
-                        changed += SpringKeyUI.createAnticipationAtFirstKey node chkPosition.checked chkRotation.checked chkScale.checked anticipationAmount anticipationTiming
+                        changed += SpringKeyUI.createAnticipationAtFirstKey node chkPosition.checked chkRotation.checked chkScale.checked anticipationAmount anticipationTiming chkAllowNegativeScale.checked
                         if changed > before do foundStartKey = true
                     )
                 )

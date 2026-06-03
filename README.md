@@ -52,6 +52,9 @@ key.
 - `Rotation`: create keys on the selected object's Rotation track.
 - `Scale`: create keys on the selected object's Scale track. This is off by
   default.
+- `Allow negative scale`: lets generated Scale keys go below `0`. Disabled by
+  default to avoid accidental mirrored/inverted scale. Affects both
+  Spring/Bounce key creation and Anticipation.
 
 ### Elastic
 
