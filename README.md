@@ -89,13 +89,15 @@ key.
 ### Anticipation
 
 - `Create Anticipation Tangent`: adjusts an existing movement start. Select the
-  first key of the movement; SpringKey finds the next key on the same enabled
-  track. The selected start key is set to Auto tangents. The following key keeps
-  its existing incoming tangent direction, but its incoming handle length is
-  extended until that tangent intersects the start key tangent.
+  first key of the movement, or move the time slider to that key if 3ds Max does
+  not expose the key selection to the script. SpringKey finds the next key on
+  the same enabled track. The selected/current start key is set to Auto tangents.
+  The following key keeps its existing incoming tangent direction, but its
+  incoming handle length is extended until that tangent intersects the start key
+  tangent.
 - `Select a start key.`: reminder label. The Anticipation tool requires a
-  selected start key and a following key on the enabled tracks. It edits
-  tangents only and does not create new keys.
+  selected start key, or the time slider on a start key, and a following key on
+  the enabled tracks. It edits tangents only and does not create new keys.
 
 ### Debug
 
