@@ -1174,18 +1174,22 @@ struct SpringKeyTool
 
             local elapsed = 0.0
             local interval = 1.0 / (2.0 * f)
-            local minInterval = (if keyStep > 0.0 then keyStep else 0.25) / frameRate
+            local minStepFrames = 0.25
+            if keyStep > 0.0 do minStepFrames = keyStep
+            local minInterval = minStepFrames / frameRate
             local guard = 0
             while (((elapsed + interval) <= decayLimit) and ((interval >= minInterval) or (guard == 0)) and (guard < 1000)) do
             (
                 local peakDt = elapsed + (interval * 0.5)
                 local mainDt = elapsed + interval
-                if (includePeak and peakDt > 0.0) do addUniqueTime times (quantizeTimeToStep (keyTime + (peakDt * frameRate)) keyStep)
-                if (includeMain and mainDt > 0.0) do addUniqueTime times (quantizeTimeToStep (keyTime + (mainDt * frameRate)) keyStep)
+                if (includePeak and (peakDt > 0.0)) do addUniqueTime times (quantizeTimeToStep (keyTime + (peakDt * frameRate)) keyStep)
+                if (includeMain and (mainDt > 0.0)) do addUniqueTime times (quantizeTimeToStep (keyTime + (mainDt * frameRate)) keyStep)
 
                 elapsed = mainDt
-                interval *= SpringKey.bounceIntervalRatio d interval
-                guard += 1
+                local intervalRatio = 1.0
+                if d > 0.0001 do intervalRatio = SpringKey.clampFloat (exp (-(d * interval) * 0.5)) 0.15 0.98
+                interval = interval * intervalRatio
+                guard = guard + 1
             )
         )
 
