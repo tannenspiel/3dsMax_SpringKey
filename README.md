@@ -79,7 +79,7 @@ key.
 ### Generated Keys
 
 - `Key step`: quantization step, in frames, for generated keys. The default
-  is `1.0`.
+  is `1.0`. This also snaps the Anticipation key timing.
 - `Stop threshold`: response threshold used to end the spring tail once the
   damped motion becomes small enough. SpringKey fades the final tail section to
   a settle key with the same value as the selected impact key. Lower values
@@ -96,7 +96,9 @@ key.
   following key. The default is `25`.
 - `Timing %`: where the anticipation key is placed between the start key and the
   following key. The default is `35`, meaning 35 percent of the time after the
-  start key.
+  start key. The final time is snapped by `Key step`; if snapping would land on
+  the start key or following key, SpringKey keeps the new key inside that
+  interval.
 - `Create Anticipation Key`: creates an opposite-direction key at the start of
   an existing movement. Select the first key of the movement explicitly.
   SpringKey finds the next key on the same enabled track, computes the movement
