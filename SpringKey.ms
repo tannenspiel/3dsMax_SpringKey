@@ -1389,8 +1389,7 @@ struct SpringKeyTool
         try
         (
             local sampleFrames = 0.1
-            local sampleTicks = sampleFrames * TicksPerFrame
-            local sampleTime = ((nextTime as float) - sampleTicks) as time
+            local sampleTime = nextTime - sampleFrames
             if sampleTime <= startTime do sampleTime = startTime
 
             local sampleValue = at time sampleTime ctrl.value
@@ -1494,7 +1493,7 @@ struct SpringKeyTool
                 if timeRatio <= 0.0 do timeRatio = 0.01
                 if timeRatio >= 1.0 do timeRatio = 0.99
 
-                local anticipationTime = ((startTime as float) + (intervalTicks * timeRatio)) as time
+                local anticipationTime = startTime + ((intervalTicks * timeRatio) / TicksPerFrame)
                 local anticipationValue = startValue - ((nextValue - startValue) * amount)
 
                 animate on
