@@ -1666,11 +1666,19 @@ struct SpringKeyTool
         (
             local rotCtrl = node.rotation.controller
             try(changed += createAnticipationIn rotCtrl amountPercent timePercent)catch()
-            try(changed += createAnticipationIn rotCtrl[1].controller amountPercent timePercent)catch()
-            try(changed += createAnticipationIn rotCtrl[2].controller amountPercent timePercent)catch()
-            try(changed += createAnticipationIn rotCtrl[3].controller amountPercent timePercent)catch()
         )
-        if doScale do try(changed += createAnticipationIn node.scale.controller amountPercent timePercent)catch()
+        if doScale do
+        (
+            local scaleBefore = changed
+            local scaleCtrl = node.scale.controller
+            try(changed += createAnticipationIn scaleCtrl amountPercent timePercent)catch()
+            if changed == scaleBefore do
+            (
+                try(changed += createAnticipationIn scaleCtrl[1].controller amountPercent timePercent)catch()
+                try(changed += createAnticipationIn scaleCtrl[2].controller amountPercent timePercent)catch()
+                try(changed += createAnticipationIn scaleCtrl[3].controller amountPercent timePercent)catch()
+            )
+        )
         changed
     ),
 
@@ -1682,11 +1690,19 @@ struct SpringKeyTool
         (
             local rotCtrl = node.rotation.controller
             try(changed += createAnticipationAtTimeIn rotCtrl startTime amountPercent timePercent)catch()
-            try(changed += createAnticipationAtTimeIn rotCtrl[1].controller startTime amountPercent timePercent)catch()
-            try(changed += createAnticipationAtTimeIn rotCtrl[2].controller startTime amountPercent timePercent)catch()
-            try(changed += createAnticipationAtTimeIn rotCtrl[3].controller startTime amountPercent timePercent)catch()
         )
-        if doScale do try(changed += createAnticipationAtTimeIn node.scale.controller startTime amountPercent timePercent)catch()
+        if doScale do
+        (
+            local scaleBefore = changed
+            local scaleCtrl = node.scale.controller
+            try(changed += createAnticipationAtTimeIn scaleCtrl startTime amountPercent timePercent)catch()
+            if changed == scaleBefore do
+            (
+                try(changed += createAnticipationAtTimeIn scaleCtrl[1].controller startTime amountPercent timePercent)catch()
+                try(changed += createAnticipationAtTimeIn scaleCtrl[2].controller startTime amountPercent timePercent)catch()
+                try(changed += createAnticipationAtTimeIn scaleCtrl[3].controller startTime amountPercent timePercent)catch()
+            )
+        )
         changed
     ),
 
@@ -1698,11 +1714,19 @@ struct SpringKeyTool
         (
             local rotCtrl = node.rotation.controller
             try(changed += createAnticipationAtFirstKeyIn rotCtrl amountPercent timePercent)catch()
-            try(changed += createAnticipationAtFirstKeyIn rotCtrl[1].controller amountPercent timePercent)catch()
-            try(changed += createAnticipationAtFirstKeyIn rotCtrl[2].controller amountPercent timePercent)catch()
-            try(changed += createAnticipationAtFirstKeyIn rotCtrl[3].controller amountPercent timePercent)catch()
         )
-        if doScale do try(changed += createAnticipationAtFirstKeyIn node.scale.controller amountPercent timePercent)catch()
+        if doScale do
+        (
+            local scaleBefore = changed
+            local scaleCtrl = node.scale.controller
+            try(changed += createAnticipationAtFirstKeyIn scaleCtrl amountPercent timePercent)catch()
+            if changed == scaleBefore do
+            (
+                try(changed += createAnticipationAtFirstKeyIn scaleCtrl[1].controller amountPercent timePercent)catch()
+                try(changed += createAnticipationAtFirstKeyIn scaleCtrl[2].controller amountPercent timePercent)catch()
+                try(changed += createAnticipationAtFirstKeyIn scaleCtrl[3].controller amountPercent timePercent)catch()
+            )
+        )
         changed
     ),
 
