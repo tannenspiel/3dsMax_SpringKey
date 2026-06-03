@@ -1426,6 +1426,27 @@ struct SpringKeyTool
         result
     ),
 
+    fn findFirstKeyIndex ctrl =
+    (
+        local firstIndex = undefined
+        local firstTime = undefined
+        try
+        (
+            local keyCount = numKeys ctrl
+            if keyCount > 0 do for i = 1 to keyCount do
+            (
+                local keyTime = getKeyTime ctrl i
+                if firstTime == undefined or keyTime < firstTime do
+                (
+                    firstTime = keyTime
+                    firstIndex = i
+                )
+            )
+        )
+        catch()
+        firstIndex
+    ),
+
     fn createAnticipationFromKeyIndex ctrl startIndex =
     (
         local changed = 0
@@ -1526,6 +1547,34 @@ struct SpringKeyTool
         changed
     ),
 
+    fn createAnticipationAtFirstKeyIn ctrl =
+    (
+        local changed = 0
+        try
+        (
+            local startIndex = findFirstKeyIndex ctrl
+            if startIndex != undefined do changed += createAnticipationFromKeyIndex ctrl startIndex
+        )
+        catch()
+
+        try
+        (
+            for i = 1 to ctrl.numSubs do
+            (
+                try
+                (
+                    local subAnim = ctrl[i]
+                    try(changed += createAnticipationAtFirstKeyIn subAnim)catch()
+                    if subAnim.controller != undefined do changed += createAnticipationAtFirstKeyIn subAnim.controller
+                )
+                catch()
+            )
+        )
+        catch()
+
+        changed
+    ),
+
     fn createAnticipation node doPosition doRotation doScale =
     (
         local changed = 0
@@ -1555,6 +1604,22 @@ struct SpringKeyTool
             try(changed += createAnticipationAtTimeIn rotCtrl[3].controller startTime)catch()
         )
         if doScale do try(changed += createAnticipationAtTimeIn node.scale.controller startTime)catch()
+        changed
+    ),
+
+    fn createAnticipationAtFirstKey node doPosition doRotation doScale =
+    (
+        local changed = 0
+        if doPosition do try(changed += createAnticipationAtFirstKeyIn node.pos.controller)catch()
+        if doRotation do
+        (
+            local rotCtrl = node.rotation.controller
+            try(changed += createAnticipationAtFirstKeyIn rotCtrl)catch()
+            try(changed += createAnticipationAtFirstKeyIn rotCtrl[1].controller)catch()
+            try(changed += createAnticipationAtFirstKeyIn rotCtrl[2].controller)catch()
+            try(changed += createAnticipationAtFirstKeyIn rotCtrl[3].controller)catch()
+        )
+        if doScale do try(changed += createAnticipationAtFirstKeyIn node.scale.controller)catch()
         changed
     ),
 
@@ -1997,7 +2062,7 @@ rollout SpringKey_Rollout "SpringKey" width:248
     group "Anticipation"
     (
         button btnAnticipation "Create Anticipation Tangent" width:214 height:28 tooltip:"Adjust the selected start key and the next key. The start key becomes Auto; the next key keeps its incoming tangent direction but extends its incoming handle to meet the start key tangent."
-        label lblAnticipation "Select a start key." align:#center tooltip:"Select the first key of a movement, or move the time slider to it. SpringKey uses the next key on the same enabled track as the tangent target."
+        label lblAnticipation "Select a start key." align:#center tooltip:"Select the first key of a movement, or use the first key on the enabled track. SpringKey uses the next key on the same track as the tangent target."
     )
 
     on chkEnableLog changed state do
@@ -2094,12 +2159,19 @@ rollout SpringKey_Rollout "SpringKey" width:248
                         changed += SpringKeyUI.createAnticipationAtTime node chkPosition.checked chkRotation.checked chkScale.checked currentTime
                     )
                 )
+                if changed == 0 do
+                (
+                    for node in selection do
+                    (
+                        changed += SpringKeyUI.createAnticipationAtFirstKey node chkPosition.checked chkRotation.checked chkScale.checked
+                    )
+                )
             )
 
             if changed == 0 then
             (
-                SpringKey.logText "Anticipation skipped: no selected/current start key with a following editable key on the enabled tracks."
-                messageBox "Select a start key, or move the time slider to a start key with a following key on the enabled tracks." title:"SpringKey"
+                SpringKey.logText "Anticipation skipped: no selected/current/first start key with a following editable key on the enabled tracks."
+                messageBox "Select a start key, or use a track with a first key and a following editable key." title:"SpringKey"
             )
             else
             (
