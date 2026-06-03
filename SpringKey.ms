@@ -1425,6 +1425,24 @@ struct SpringKeyTool
         nextIndex
     ),
 
+    fn hasChildControllers ctrl =
+    (
+        local result = false
+        try
+        (
+            for i = 1 to ctrl.numSubs do
+            (
+                if result == false do
+                (
+                    local subAnim = ctrl[i]
+                    if subAnim.controller != undefined do result = true
+                )
+            )
+        )
+        catch()
+        result
+    ),
+
     fn findKeyIndexAtTime ctrl targetTime =
     (
         local result = undefined
@@ -1496,19 +1514,21 @@ struct SpringKeyTool
                 local anticipationTime = startTime + ((intervalTicks * timeRatio) / TicksPerFrame)
                 local anticipationValue = startValue - ((nextValue - startValue) * amount)
 
-                animate on
-                (
-                    at time anticipationTime ctrl.value = anticipationValue
-                )
-
                 setKeyTangentType startKey #auto
+                local anticipationKey = undefined
                 local anticipationIndex = findKeyIndexAtTime ctrl anticipationTime
-                if anticipationIndex != undefined do
+                if anticipationIndex != undefined do anticipationKey = getControllerKey ctrl anticipationIndex
+                if anticipationKey == undefined do try(anticipationKey = addNewKey ctrl anticipationTime)catch()
+                if anticipationKey != undefined do
                 (
-                    local anticipationKey = getControllerKey ctrl anticipationIndex
-                    if anticipationKey != undefined do setKeyTangentType anticipationKey #auto
-                    changed += 1
-                    SpringKey.logText ("Create anticipation key at " + (anticipationTime as string) + ", value: " + (anticipationValue as string))
+                    try(anticipationKey.value = anticipationValue)catch()
+                    setKeyTangentType anticipationKey #auto
+                    local verifyValue = at time anticipationTime ctrl.value
+                    if (verifyValue as string) == (anticipationValue as string) do
+                    (
+                        changed += 1
+                        SpringKey.logText ("Create anticipation key at " + (anticipationTime as string) + ", value: " + (anticipationValue as string))
+                    )
                 )
             )
         )
@@ -1521,12 +1541,15 @@ struct SpringKeyTool
 
         try
         (
-            local keyCount = numKeys ctrl
-            if keyCount > 0 do for i = 1 to keyCount do
+            if not (hasChildControllers ctrl) do
             (
-                if isControllerKeySelected ctrl i do
+                local keyCount = numKeys ctrl
+                if keyCount > 0 do for i = 1 to keyCount do
                 (
-                    changed += createAnticipationFromKeyIndex ctrl i amountPercent timePercent
+                    if ((changed == 0) and (isControllerKeySelected ctrl i)) do
+                    (
+                        changed += createAnticipationFromKeyIndex ctrl i amountPercent timePercent
+                    )
                 )
             )
         )
@@ -1536,13 +1559,16 @@ struct SpringKeyTool
         (
             for i = 1 to ctrl.numSubs do
             (
-                try
+                if changed == 0 do
                 (
-                    local subAnim = ctrl[i]
-                    try(changed += createAnticipationIn subAnim amountPercent timePercent)catch()
-                    if subAnim.controller != undefined do changed += createAnticipationIn subAnim.controller amountPercent timePercent
+                    try
+                    (
+                        local subAnim = ctrl[i]
+                        try(changed += createAnticipationIn subAnim amountPercent timePercent)catch()
+                        if subAnim.controller != undefined do changed += createAnticipationIn subAnim.controller amountPercent timePercent
+                    )
+                    catch()
                 )
-                catch()
             )
         )
         catch()
@@ -1555,8 +1581,11 @@ struct SpringKeyTool
         local changed = 0
         try
         (
-            local startIndex = findKeyIndexAtTime ctrl startTime
-            if startIndex != undefined do changed += createAnticipationFromKeyIndex ctrl startIndex amountPercent timePercent
+            if not (hasChildControllers ctrl) do
+            (
+                local startIndex = findKeyIndexAtTime ctrl startTime
+                if startIndex != undefined do changed += createAnticipationFromKeyIndex ctrl startIndex amountPercent timePercent
+            )
         )
         catch()
 
@@ -1564,13 +1593,16 @@ struct SpringKeyTool
         (
             for i = 1 to ctrl.numSubs do
             (
-                try
+                if changed == 0 do
                 (
-                    local subAnim = ctrl[i]
-                    try(changed += createAnticipationAtTimeIn subAnim startTime amountPercent timePercent)catch()
-                    if subAnim.controller != undefined do changed += createAnticipationAtTimeIn subAnim.controller startTime amountPercent timePercent
+                    try
+                    (
+                        local subAnim = ctrl[i]
+                        try(changed += createAnticipationAtTimeIn subAnim startTime amountPercent timePercent)catch()
+                        if subAnim.controller != undefined do changed += createAnticipationAtTimeIn subAnim.controller startTime amountPercent timePercent
+                    )
+                    catch()
                 )
-                catch()
             )
         )
         catch()
@@ -1583,8 +1615,11 @@ struct SpringKeyTool
         local changed = 0
         try
         (
-            local startIndex = findFirstKeyIndex ctrl
-            if startIndex != undefined do changed += createAnticipationFromKeyIndex ctrl startIndex amountPercent timePercent
+            if not (hasChildControllers ctrl) do
+            (
+                local startIndex = findFirstKeyIndex ctrl
+                if startIndex != undefined do changed += createAnticipationFromKeyIndex ctrl startIndex amountPercent timePercent
+            )
         )
         catch()
 
@@ -1592,13 +1627,16 @@ struct SpringKeyTool
         (
             for i = 1 to ctrl.numSubs do
             (
-                try
+                if changed == 0 do
                 (
-                    local subAnim = ctrl[i]
-                    try(changed += createAnticipationAtFirstKeyIn subAnim amountPercent timePercent)catch()
-                    if subAnim.controller != undefined do changed += createAnticipationAtFirstKeyIn subAnim.controller amountPercent timePercent
+                    try
+                    (
+                        local subAnim = ctrl[i]
+                        try(changed += createAnticipationAtFirstKeyIn subAnim amountPercent timePercent)catch()
+                        if subAnim.controller != undefined do changed += createAnticipationAtFirstKeyIn subAnim.controller amountPercent timePercent
+                    )
+                    catch()
                 )
-                catch()
             )
         )
         catch()
