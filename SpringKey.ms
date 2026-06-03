@@ -2146,32 +2146,55 @@ rollout SpringKey_Rollout "SpringKey" width:248
         else
         (
             local changed = 0
+            local foundStartKey = false
+            local jobs = SpringKeyUI.collectBakeJobs selection chkPosition.checked chkRotation.checked chkScale.checked
             undo "Create Anticipation Tangent" on
             (
-                for node in selection do
+                if jobs.count > 0 do
                 (
-                    changed += SpringKeyUI.createAnticipation node chkPosition.checked chkRotation.checked chkScale.checked
+                    foundStartKey = true
+                    for job in jobs do
+                    (
+                        local node = job[1]
+                        local selectedRange = job[2]
+                        local startTime = selectedRange[2]
+                        SpringKey.logText ("Using selected anticipation start key on " + node.name + ": " + (startTime as string) + ", selected times: " + (selectedRange[3] as string))
+                        changed += SpringKeyUI.createAnticipationAtTime node chkPosition.checked chkRotation.checked chkScale.checked startTime
+                    )
                 )
+
                 if changed == 0 do
                 (
                     for node in selection do
                     (
+                        local before = changed
                         changed += SpringKeyUI.createAnticipationAtTime node chkPosition.checked chkRotation.checked chkScale.checked currentTime
+                        if changed > before do foundStartKey = true
                     )
                 )
                 if changed == 0 do
                 (
                     for node in selection do
                     (
+                        local before = changed
                         changed += SpringKeyUI.createAnticipationAtFirstKey node chkPosition.checked chkRotation.checked chkScale.checked
+                        if changed > before do foundStartKey = true
                     )
                 )
             )
 
             if changed == 0 then
             (
-                SpringKey.logText "Anticipation skipped: no selected/current/first start key with a following editable key on the enabled tracks."
-                messageBox "Select a start key, or use a track with a first key and a following editable key." title:"SpringKey"
+                if foundStartKey then
+                (
+                    SpringKey.logText "Anticipation skipped: start key found, but no following editable Bezier key/tangent was changed."
+                    messageBox "Start key was found, but SpringKey could not edit the following key tangent on the enabled tracks." title:"SpringKey"
+                )
+                else
+                (
+                    SpringKey.logText "Anticipation skipped: no selected/current/first start key with a following editable key on the enabled tracks."
+                    messageBox "Select a start key, or use a track with a first key and a following editable key." title:"SpringKey"
+                )
             )
             else
             (
