@@ -1182,8 +1182,26 @@ struct SpringKeyTool
             (
                 local peakDt = elapsed + (interval * 0.5)
                 local mainDt = elapsed + interval
-                if (includePeak and (peakDt > 0.0)) do addUniqueTime times (quantizeTimeToStep (keyTime + (peakDt * frameRate)) keyStep)
-                if (includeMain and (mainDt > 0.0)) do addUniqueTime times (quantizeTimeToStep (keyTime + (mainDt * frameRate)) keyStep)
+                if (includePeak and (peakDt > 0.0)) do
+                (
+                    local peakTime = keyTime + (peakDt * frameRate)
+                    if keyStep > 0.0 do
+                    (
+                        local peakFrame = (peakTime as float) / TicksPerFrame
+                        peakTime = ((floor ((peakFrame / keyStep) + 0.5)) * keyStep) as time
+                    )
+                    addUniqueTime times peakTime
+                )
+                if (includeMain and (mainDt > 0.0)) do
+                (
+                    local mainTime = keyTime + (mainDt * frameRate)
+                    if keyStep > 0.0 do
+                    (
+                        local mainFrame = (mainTime as float) / TicksPerFrame
+                        mainTime = ((floor ((mainFrame / keyStep) + 0.5)) * keyStep) as time
+                    )
+                    addUniqueTime times mainTime
+                )
 
                 elapsed = mainDt
                 local intervalRatio = 1.0
