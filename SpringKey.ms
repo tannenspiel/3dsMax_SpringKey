@@ -1466,7 +1466,15 @@ struct SpringKeyTool
         firstIndex
     ),
 
-    fn createAnticipationFromKeyIndex ctrl startIndex =
+    fn clamp01Percent value =
+    (
+        local result = value
+        if result < 0.0 do result = 0.0
+        if result > 100.0 do result = 100.0
+        result
+    ),
+
+    fn createAnticipationFromKeyIndex ctrl startIndex amountPercent timePercent =
     (
         local changed = 0
         local startTime = getKeyTime ctrl startIndex
@@ -1474,42 +1482,41 @@ struct SpringKeyTool
         if nextIndex != undefined do
         (
             local startKey = getControllerKey ctrl startIndex
-            local nextKey = getControllerKey ctrl nextIndex
             local nextTime = getKeyTime ctrl nextIndex
             local startValue = at time startTime ctrl.value
             local nextValue = at time nextTime ctrl.value
-            local inTangent = undefined
-            try(inTangent = nextKey.inTangent)catch()
-            if inTangent == undefined do inTangent = getEstimatedIncomingTangent ctrl startTime nextTime
+            local intervalTicks = (nextTime as float) - (startTime as float)
 
-            if startKey != undefined and nextKey != undefined and inTangent != undefined do
+            if startKey != undefined and intervalTicks > 1.0 do
             (
-                local segmentFrames = ((nextTime as float) - (startTime as float)) / TicksPerFrame
-                local targetLength = getAnticipationLength startValue nextValue inTangent segmentFrames
-                if targetLength == undefined do
+                local amount = amountPercent / 100.0
+                local timeRatio = (clamp01Percent timePercent) / 100.0
+                if timeRatio <= 0.0 do timeRatio = 0.01
+                if timeRatio >= 1.0 do timeRatio = 0.99
+
+                local anticipationTime = ((startTime as float) + (intervalTicks * timeRatio)) as time
+                local anticipationValue = startValue - ((nextValue - startValue) * amount)
+
+                animate on
                 (
-                    inTangent = getEstimatedIncomingTangent ctrl startTime nextTime
-                    if inTangent != undefined do targetLength = getAnticipationLength startValue nextValue inTangent segmentFrames
+                    at time anticipationTime ctrl.value = anticipationValue
                 )
-                if targetLength != undefined do
+
+                setKeyTangentType startKey #auto
+                local anticipationIndex = findKeyIndexAtTime ctrl anticipationTime
+                if anticipationIndex != undefined do
                 (
-                    setKeyTangentType startKey #auto
-                    try(nextKey.freeHandle = true)catch()
-                    try(nextKey.x_locked = false)catch()
-                    try(nextKey.y_locked = false)catch()
-                    try(nextKey.z_locked = false)catch()
-                    try(nextKey.inTangentType = #custom)catch()
-                    try(nextKey.inTangent = inTangent)catch()
-                    try(nextKey.inTangentLength = targetLength)catch()
+                    local anticipationKey = getControllerKey ctrl anticipationIndex
+                    if anticipationKey != undefined do setKeyTangentType anticipationKey #auto
                     changed += 1
-                    SpringKey.logText ("Create anticipation tangent at " + (startTime as string) + " -> " + (nextTime as string) + ", length: " + (targetLength as string))
+                    SpringKey.logText ("Create anticipation key at " + (anticipationTime as string) + ", value: " + (anticipationValue as string))
                 )
             )
         )
         changed
     ),
 
-    fn createAnticipationIn ctrl =
+    fn createAnticipationIn ctrl amountPercent timePercent =
     (
         local changed = 0
 
@@ -1520,7 +1527,7 @@ struct SpringKeyTool
             (
                 if isControllerKeySelected ctrl i do
                 (
-                    changed += createAnticipationFromKeyIndex ctrl i
+                    changed += createAnticipationFromKeyIndex ctrl i amountPercent timePercent
                 )
             )
         )
@@ -1533,8 +1540,8 @@ struct SpringKeyTool
                 try
                 (
                     local subAnim = ctrl[i]
-                    try(changed += createAnticipationIn subAnim)catch()
-                    if subAnim.controller != undefined do changed += createAnticipationIn subAnim.controller
+                    try(changed += createAnticipationIn subAnim amountPercent timePercent)catch()
+                    if subAnim.controller != undefined do changed += createAnticipationIn subAnim.controller amountPercent timePercent
                 )
                 catch()
             )
@@ -1544,13 +1551,13 @@ struct SpringKeyTool
         changed
     ),
 
-    fn createAnticipationAtTimeIn ctrl startTime =
+    fn createAnticipationAtTimeIn ctrl startTime amountPercent timePercent =
     (
         local changed = 0
         try
         (
             local startIndex = findKeyIndexAtTime ctrl startTime
-            if startIndex != undefined do changed += createAnticipationFromKeyIndex ctrl startIndex
+            if startIndex != undefined do changed += createAnticipationFromKeyIndex ctrl startIndex amountPercent timePercent
         )
         catch()
 
@@ -1561,8 +1568,8 @@ struct SpringKeyTool
                 try
                 (
                     local subAnim = ctrl[i]
-                    try(changed += createAnticipationAtTimeIn subAnim startTime)catch()
-                    if subAnim.controller != undefined do changed += createAnticipationAtTimeIn subAnim.controller startTime
+                    try(changed += createAnticipationAtTimeIn subAnim startTime amountPercent timePercent)catch()
+                    if subAnim.controller != undefined do changed += createAnticipationAtTimeIn subAnim.controller startTime amountPercent timePercent
                 )
                 catch()
             )
@@ -1572,13 +1579,13 @@ struct SpringKeyTool
         changed
     ),
 
-    fn createAnticipationAtFirstKeyIn ctrl =
+    fn createAnticipationAtFirstKeyIn ctrl amountPercent timePercent =
     (
         local changed = 0
         try
         (
             local startIndex = findFirstKeyIndex ctrl
-            if startIndex != undefined do changed += createAnticipationFromKeyIndex ctrl startIndex
+            if startIndex != undefined do changed += createAnticipationFromKeyIndex ctrl startIndex amountPercent timePercent
         )
         catch()
 
@@ -1589,8 +1596,8 @@ struct SpringKeyTool
                 try
                 (
                     local subAnim = ctrl[i]
-                    try(changed += createAnticipationAtFirstKeyIn subAnim)catch()
-                    if subAnim.controller != undefined do changed += createAnticipationAtFirstKeyIn subAnim.controller
+                    try(changed += createAnticipationAtFirstKeyIn subAnim amountPercent timePercent)catch()
+                    if subAnim.controller != undefined do changed += createAnticipationAtFirstKeyIn subAnim.controller amountPercent timePercent
                 )
                 catch()
             )
@@ -1600,51 +1607,51 @@ struct SpringKeyTool
         changed
     ),
 
-    fn createAnticipation node doPosition doRotation doScale =
+    fn createAnticipation node doPosition doRotation doScale amountPercent timePercent =
     (
         local changed = 0
-        if doPosition do try(changed += createAnticipationIn node.pos.controller)catch()
+        if doPosition do try(changed += createAnticipationIn node.pos.controller amountPercent timePercent)catch()
         if doRotation do
         (
             local rotCtrl = node.rotation.controller
-            try(changed += createAnticipationIn rotCtrl)catch()
-            try(changed += createAnticipationIn rotCtrl[1].controller)catch()
-            try(changed += createAnticipationIn rotCtrl[2].controller)catch()
-            try(changed += createAnticipationIn rotCtrl[3].controller)catch()
+            try(changed += createAnticipationIn rotCtrl amountPercent timePercent)catch()
+            try(changed += createAnticipationIn rotCtrl[1].controller amountPercent timePercent)catch()
+            try(changed += createAnticipationIn rotCtrl[2].controller amountPercent timePercent)catch()
+            try(changed += createAnticipationIn rotCtrl[3].controller amountPercent timePercent)catch()
         )
-        if doScale do try(changed += createAnticipationIn node.scale.controller)catch()
+        if doScale do try(changed += createAnticipationIn node.scale.controller amountPercent timePercent)catch()
         changed
     ),
 
-    fn createAnticipationAtTime node doPosition doRotation doScale startTime =
+    fn createAnticipationAtTime node doPosition doRotation doScale startTime amountPercent timePercent =
     (
         local changed = 0
-        if doPosition do try(changed += createAnticipationAtTimeIn node.pos.controller startTime)catch()
+        if doPosition do try(changed += createAnticipationAtTimeIn node.pos.controller startTime amountPercent timePercent)catch()
         if doRotation do
         (
             local rotCtrl = node.rotation.controller
-            try(changed += createAnticipationAtTimeIn rotCtrl startTime)catch()
-            try(changed += createAnticipationAtTimeIn rotCtrl[1].controller startTime)catch()
-            try(changed += createAnticipationAtTimeIn rotCtrl[2].controller startTime)catch()
-            try(changed += createAnticipationAtTimeIn rotCtrl[3].controller startTime)catch()
+            try(changed += createAnticipationAtTimeIn rotCtrl startTime amountPercent timePercent)catch()
+            try(changed += createAnticipationAtTimeIn rotCtrl[1].controller startTime amountPercent timePercent)catch()
+            try(changed += createAnticipationAtTimeIn rotCtrl[2].controller startTime amountPercent timePercent)catch()
+            try(changed += createAnticipationAtTimeIn rotCtrl[3].controller startTime amountPercent timePercent)catch()
         )
-        if doScale do try(changed += createAnticipationAtTimeIn node.scale.controller startTime)catch()
+        if doScale do try(changed += createAnticipationAtTimeIn node.scale.controller startTime amountPercent timePercent)catch()
         changed
     ),
 
-    fn createAnticipationAtFirstKey node doPosition doRotation doScale =
+    fn createAnticipationAtFirstKey node doPosition doRotation doScale amountPercent timePercent =
     (
         local changed = 0
-        if doPosition do try(changed += createAnticipationAtFirstKeyIn node.pos.controller)catch()
+        if doPosition do try(changed += createAnticipationAtFirstKeyIn node.pos.controller amountPercent timePercent)catch()
         if doRotation do
         (
             local rotCtrl = node.rotation.controller
-            try(changed += createAnticipationAtFirstKeyIn rotCtrl)catch()
-            try(changed += createAnticipationAtFirstKeyIn rotCtrl[1].controller)catch()
-            try(changed += createAnticipationAtFirstKeyIn rotCtrl[2].controller)catch()
-            try(changed += createAnticipationAtFirstKeyIn rotCtrl[3].controller)catch()
+            try(changed += createAnticipationAtFirstKeyIn rotCtrl amountPercent timePercent)catch()
+            try(changed += createAnticipationAtFirstKeyIn rotCtrl[1].controller amountPercent timePercent)catch()
+            try(changed += createAnticipationAtFirstKeyIn rotCtrl[2].controller amountPercent timePercent)catch()
+            try(changed += createAnticipationAtFirstKeyIn rotCtrl[3].controller amountPercent timePercent)catch()
         )
-        if doScale do try(changed += createAnticipationAtFirstKeyIn node.scale.controller)catch()
+        if doScale do try(changed += createAnticipationAtFirstKeyIn node.scale.controller amountPercent timePercent)catch()
         changed
     ),
 
@@ -2086,8 +2093,10 @@ rollout SpringKey_Rollout "SpringKey" width:248
 
     group "Anticipation"
     (
-        button btnAnticipation "Create Anticipation Tangent" width:214 height:28 tooltip:"Adjust the selected start key and the next key. The start key becomes Auto; the next key keeps its incoming tangent direction but extends its incoming handle to meet the start key tangent."
-        label lblAnticipation "Select a start key." align:#center tooltip:"Select the first key of a movement, or use the first key on the enabled track. SpringKey uses the next key on the same track as the tangent target."
+        spinner spnAnticipationAmount "Amount %" range:[0.0,1000.0,25.0] type:#float scale:1.0 fieldwidth:72 align:#right tooltip:"How far the anticipation key moves opposite the main motion. 25 means one quarter of the distance from the start key to the next key."
+        spinner spnAnticipationTiming "Timing %" range:[1.0,99.0,35.0] type:#float scale:1.0 fieldwidth:72 align:#right tooltip:"Where to place the anticipation key between the start key and the next key. 35 means 35 percent of the way after the start key."
+        button btnAnticipation "Create Anticipation Key" width:214 height:28 tooltip:"Create an opposite-direction anticipation key between the selected start key and the next key. The start and anticipation keys are set to Auto tangents."
+        label lblAnticipation "Select a start key." align:#center tooltip:"Select the first key of a movement, or use the first key on the enabled track. SpringKey uses the next key on the same track as the motion target."
     )
 
     on chkEnableLog changed state do
@@ -2173,7 +2182,9 @@ rollout SpringKey_Rollout "SpringKey" width:248
             local changed = 0
             local foundStartKey = false
             local jobs = SpringKeyUI.collectBakeJobs selection chkPosition.checked chkRotation.checked chkScale.checked
-            undo "Create Anticipation Tangent" on
+            local anticipationAmount = spnAnticipationAmount.value
+            local anticipationTiming = spnAnticipationTiming.value
+            undo "Create Anticipation Key" on
             (
                 if jobs.count > 0 do
                 (
@@ -2184,7 +2195,7 @@ rollout SpringKey_Rollout "SpringKey" width:248
                         local selectedRange = job[2]
                         local startTime = selectedRange[2]
                         SpringKey.logText ("Using selected anticipation start key on " + node.name + ": " + (startTime as string) + ", selected times: " + (selectedRange[3] as string))
-                        changed += SpringKeyUI.createAnticipationAtTime node chkPosition.checked chkRotation.checked chkScale.checked startTime
+                        changed += SpringKeyUI.createAnticipationAtTime node chkPosition.checked chkRotation.checked chkScale.checked startTime anticipationAmount anticipationTiming
                     )
                 )
 
@@ -2193,7 +2204,7 @@ rollout SpringKey_Rollout "SpringKey" width:248
                     for node in selection do
                     (
                         local before = changed
-                        changed += SpringKeyUI.createAnticipationAtTime node chkPosition.checked chkRotation.checked chkScale.checked currentTime
+                        changed += SpringKeyUI.createAnticipationAtTime node chkPosition.checked chkRotation.checked chkScale.checked currentTime anticipationAmount anticipationTiming
                         if changed > before do foundStartKey = true
                     )
                 )
@@ -2202,7 +2213,7 @@ rollout SpringKey_Rollout "SpringKey" width:248
                     for node in selection do
                     (
                         local before = changed
-                        changed += SpringKeyUI.createAnticipationAtFirstKey node chkPosition.checked chkRotation.checked chkScale.checked
+                        changed += SpringKeyUI.createAnticipationAtFirstKey node chkPosition.checked chkRotation.checked chkScale.checked anticipationAmount anticipationTiming
                         if changed > before do foundStartKey = true
                     )
                 )
@@ -2212,8 +2223,8 @@ rollout SpringKey_Rollout "SpringKey" width:248
             (
                 if foundStartKey then
                 (
-                    SpringKey.logText "Anticipation skipped: start key found, but no following editable Bezier key/tangent was changed."
-                    messageBox "Start key was found, but SpringKey could not edit the following key tangent on the enabled tracks." title:"SpringKey"
+                    SpringKey.logText "Anticipation skipped: start key found, but no following key could be used on the enabled tracks."
+                    messageBox "Start key was found, but SpringKey could not create an anticipation key on the enabled tracks." title:"SpringKey"
                 )
                 else
                 (
@@ -2223,7 +2234,7 @@ rollout SpringKey_Rollout "SpringKey" width:248
             )
             else
             (
-                SpringKey.logText ("Anticipation tangent changes: " + (changed as string))
+                SpringKey.logText ("Anticipation keys created: " + (changed as string))
                 redrawViews()
             )
         )
