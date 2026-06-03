@@ -1871,7 +1871,7 @@ global SpringKeyUI = SpringKeyTool()
 
 try(destroyDialog SpringKey_Rollout)catch()
 
-rollout SpringKey_Rollout "SpringKey" width:500
+rollout SpringKey_Rollout "SpringKey" width:248
 (
     group "Tracks"
     (
@@ -1910,9 +1910,11 @@ rollout SpringKey_Rollout "SpringKey" width:500
 
     label lblInfo "Sparse generated keys only." align:#center tooltip:"This rollout writes animation keys directly instead of leaving live SpringKey controllers on the object."
 
-    groupBox grpAnticipation "Anticipation" pos:[258,6] width:226 height:78
-    button btnAnticipation "Create Anticipation Tangent" pos:[270,26] width:202 height:28 tooltip:"Adjust the selected start key and the next key. The start key becomes Auto; the next key keeps its incoming tangent direction but extends its incoming handle to meet the start key tangent."
-    label lblAnticipation "Select a start key." pos:[270,58] width:202 align:#center tooltip:"Select the first key of a movement. SpringKey uses the next key on the same enabled track as the tangent target."
+    group "Anticipation"
+    (
+        button btnAnticipation "Create Anticipation Tangent" width:214 height:28 tooltip:"Adjust the selected start key and the next key. The start key becomes Auto; the next key keeps its incoming tangent direction but extends its incoming handle to meet the start key tangent."
+        label lblAnticipation "Select a start key." align:#center tooltip:"Select the first key of a movement. SpringKey uses the next key on the same enabled track as the tangent target."
+    )
 
     on chkEnableLog changed state do
     (
