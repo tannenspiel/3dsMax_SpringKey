@@ -135,9 +135,9 @@ struct SpringKeyCore
             local guard = 0
             while ((elapsed > interval) and (guard < 1000)) do
             (
-                elapsed -= interval
-                interval *= SpringKey.bounceIntervalRatio d interval
-                guard += 1
+                elapsed = elapsed - interval
+                interval = interval * (bounceIntervalRatio d interval)
+                guard = guard + 1
             )
             clampFloat (elapsed / interval) 0.0 1.0
         )
@@ -2146,47 +2146,74 @@ struct SpringKeyTool
 
     fn bakeNodeRange node doPosition doRotation doScale startTime endTime amp freq decay sample matchVelocity bounceMode threshold keyStep autoSpringImpactTangent allowNegativeScale =
     (
-        local sourceNode = point name:(uniqueName (node.name + "_SpringKey_BAKE_SRC")) size:20 box:false cross:true axistripod:true centermarker:true
-        sourceNode.parent = node.parent
-        sourceNode.transform = node.transform
-        sourceNode.isHidden = true
-
-        if doPosition do try(sourceNode.pos.controller = copy node.pos.controller)catch(sourceNode.pos.controller = node.pos.controller)
-        if doRotation do try(sourceNode.rotation.controller = copy node.rotation.controller)catch(sourceNode.rotation.controller = node.rotation.controller)
-        if doScale do try(sourceNode.scale.controller = copy node.scale.controller)catch(sourceNode.scale.controller = node.scale.controller)
-
-        if doPosition do try(deleteKeysAfterTimeIn sourceNode.pos.controller endTime)catch()
-        if doRotation do try(deleteKeysAfterTimeIn sourceNode.rotation.controller endTime)catch()
-        if doScale do try(deleteKeysAfterTimeIn sourceNode.scale.controller endTime)catch()
-        deleteBakedKeysAfterTime node doPosition doRotation doScale endTime
-
-        local settleTimes = getSpringSettleTimes endTime freq decay animationRange.end threshold
-        local fadeStartTime = if settleTimes != undefined then settleTimes[1] else undefined
-        local settleTime = if settleTimes != undefined then quantizeTimeToStep settleTimes[2] keyStep else undefined
-        local times = buildRangeBakeTimes startTime endTime freq decay threshold keyStep bounceMode
-        SpringKey.logText ("Create raw key count: " + (times.count as string) + ", key step: " + (keyStep as string))
-        times = quantizeTimes times keyStep
-        if settleTime != undefined and ((settleTime as float) - (endTime as float)) > 0.5 do addUniqueTime times settleTime
-        times = keepTimesAfter times endTime
-        sort times
-        if settleTime != undefined do SpringKey.logText ("Create settle key: " + (settleTime as string))
-        SpringKey.logText ("Create keys on node: " + node.name + ", key count: " + (times.count as string))
-        if times.count > 0 do
+        local sourceNode = undefined
+        try
         (
-            SpringKey.logText ("Create first key time: " + (times[1] as string))
-            SpringKey.logText ("Create last key time: " + (times[times.count] as string))
+            sourceNode = point name:(uniqueName (node.name + "_SpringKey_BAKE_SRC")) size:20 box:false cross:true axistripod:true centermarker:true
+            sourceNode.parent = node.parent
+            sourceNode.transform = node.transform
+            sourceNode.isHidden = true
+
+            if doPosition do
+            (
+                local posCopy = undefined
+                try(posCopy = copy node.pos.controller)catch()
+                if posCopy == undefined do throw ("SpringKey could not copy Position controller on " + node.name + ".")
+                sourceNode.pos.controller = posCopy
+            )
+            if doRotation do
+            (
+                local rotCopy = undefined
+                try(rotCopy = copy node.rotation.controller)catch()
+                if rotCopy == undefined do throw ("SpringKey could not copy Rotation controller on " + node.name + ".")
+                sourceNode.rotation.controller = rotCopy
+            )
+            if doScale do
+            (
+                local scaleCopy = undefined
+                try(scaleCopy = copy node.scale.controller)catch()
+                if scaleCopy == undefined do throw ("SpringKey could not copy Scale controller on " + node.name + ".")
+                sourceNode.scale.controller = scaleCopy
+            )
+
+            if doPosition do try(deleteKeysAfterTimeIn sourceNode.pos.controller endTime)catch()
+            if doRotation do try(deleteKeysAfterTimeIn sourceNode.rotation.controller endTime)catch()
+            if doScale do try(deleteKeysAfterTimeIn sourceNode.scale.controller endTime)catch()
+            deleteBakedKeysAfterTime node doPosition doRotation doScale endTime
+
+            local settleTimes = getSpringSettleTimes endTime freq decay animationRange.end threshold
+            local fadeStartTime = if settleTimes != undefined then settleTimes[1] else undefined
+            local settleTime = if settleTimes != undefined then quantizeTimeToStep settleTimes[2] keyStep else undefined
+            local times = buildRangeBakeTimes startTime endTime freq decay threshold keyStep bounceMode
+            SpringKey.logText ("Create raw key count: " + (times.count as string) + ", key step: " + (keyStep as string))
+            times = quantizeTimes times keyStep
+            if settleTime != undefined and ((settleTime as float) - (endTime as float)) > 0.5 do addUniqueTime times settleTime
+            times = keepTimesAfter times endTime
+            sort times
+            if settleTime != undefined do SpringKey.logText ("Create settle key: " + (settleTime as string))
+            SpringKey.logText ("Create keys on node: " + node.name + ", key count: " + (times.count as string))
+            if times.count > 0 do
+            (
+                SpringKey.logText ("Create first key time: " + (times[1] as string))
+                SpringKey.logText ("Create last key time: " + (times[times.count] as string))
+            )
+
+            local peakTimes = buildPeakBakeTimes endTime freq decay animationRange.end threshold keyStep bounceMode
+            local mainTimes = removeTimesMatching (buildMainBakeTimes endTime freq decay animationRange.end threshold keyStep bounceMode) peakTimes 0.5
+            if doPosition do bakePositionTrack node sourceNode times endTime amp freq decay sample matchVelocity bounceMode fadeStartTime settleTime mainTimes keyStep
+            if doRotation do bakeRotationTrack node sourceNode times endTime amp freq decay sample matchVelocity bounceMode fadeStartTime settleTime mainTimes keyStep
+            if doScale do bakeScaleTrack node sourceNode times endTime amp freq decay sample matchVelocity bounceMode fadeStartTime settleTime mainTimes keyStep allowNegativeScale
+            local mainTangentType = if bounceMode then #fast else #auto
+            setGeneratedTangents node doPosition doRotation doScale endTime peakTimes mainTimes keyStep mainTangentType #slow
+            if (autoSpringImpactTangent and (not bounceMode)) do setKeyTangentTypeAtTime node doPosition doRotation doScale endTime #auto
+        )
+        catch
+        (
+            try(if sourceNode != undefined do delete sourceNode)catch()
+            throw()
         )
 
-        local peakTimes = buildPeakBakeTimes endTime freq decay animationRange.end threshold keyStep bounceMode
-        local mainTimes = removeTimesMatching (buildMainBakeTimes endTime freq decay animationRange.end threshold keyStep bounceMode) peakTimes 0.5
-        if doPosition do bakePositionTrack node sourceNode times endTime amp freq decay sample matchVelocity bounceMode fadeStartTime settleTime mainTimes keyStep
-        if doRotation do bakeRotationTrack node sourceNode times endTime amp freq decay sample matchVelocity bounceMode fadeStartTime settleTime mainTimes keyStep
-        if doScale do bakeScaleTrack node sourceNode times endTime amp freq decay sample matchVelocity bounceMode fadeStartTime settleTime mainTimes keyStep allowNegativeScale
-        local mainTangentType = if bounceMode then #fast else #auto
-        setGeneratedTangents node doPosition doRotation doScale endTime peakTimes mainTimes keyStep mainTangentType #slow
-        if (autoSpringImpactTangent and (not bounceMode)) do setKeyTangentTypeAtTime node doPosition doRotation doScale endTime #auto
-
-        try(delete sourceNode)catch()
+        try(if sourceNode != undefined do delete sourceNode)catch()
     ),
 
     fn bakeNode node doPosition doRotation doScale amp freq decay sample matchVelocity threshold =
