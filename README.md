@@ -26,7 +26,8 @@ The current rollout is focused on direct sparse key creation, not on applying
 persistent live controllers from the UI.
 
 It also includes a separate Anticipation tool for shaping the start of an
-existing movement by editing Bezier tangents.
+existing movement by creating an opposite-direction key between the selected
+start key and the following key.
 
 ## Usage
 
@@ -79,8 +80,8 @@ key.
   contact/return intervals get shorter over time. For bounce keys, generated
   peak keys use Slow tangents and generated main keys use Fast tangents.
 - `Auto spring impact tangent`: spring only. When enabled, the selected impact
-  key is set to Auto tangents so it matches the generated main spring keys.
-  Disabled by default to preserve the original source key.
+  key is set to Auto tangents so the generated spring tail leaves the impact key
+  smoothly. Disabled by default to preserve the original source key.
 
 ### Generated Keys
 

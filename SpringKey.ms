@@ -2334,7 +2334,7 @@ rollout SpringKey_Rollout "SpringKey" width:248
         spinner spnSampleFrames "Velocity sample (frames)" range:[0.001,100.0,0.1] type:#float fieldwidth:72 align:#right tooltip:"How many frames before the impact key are sampled to estimate incoming velocity. Smaller values react to the immediate tangent; larger values average over a wider section."
         checkbox chkMatchVelocity "Match incoming speed" checked:true align:#left tooltip:"Scale the spring by the incoming velocity so faster animation produces a stronger overshoot. Turn off for a more fixed, amplitude-driven response."
         checkbox chkBounce "Bounce" checked:false align:#left tooltip:"Use a one-sided bounce response opposite the incoming motion. Bounce intervals compress over time as Decay removes energy."
-        checkbox chkAutoSpringImpact "Auto spring impact tangent" checked:false align:#left tooltip:"Spring only: set the selected impact key to Auto tangents so it behaves like the main generated spring keys. Leave off to preserve the original animation key."
+        checkbox chkAutoSpringImpact "Auto spring impact tangent" checked:false align:#left tooltip:"Spring only: set the selected impact key to Auto tangents so the spring tail leaves it smoothly. Leave off to preserve the original animation key."
     )
 
     group "Generated Keys"
