@@ -45,6 +45,20 @@ cleared on the enabled tracks before new keys are written. Selected source keys
 are not rewritten; generated keys are kept strictly after the selected impact
 key.
 
+## Installation Package
+
+The installer package is in `Out/SpringKey`:
+
+- `SpringKey.mzp`: drag this file into the 3ds Max viewport, or run it through
+  `Scripting -> Run Script`.
+- `SpringKey.zip`: distributable archive containing `SpringKey.mzp` and
+  `Install.txt`.
+
+The installer copies `SpringKey.ms` to
+`scripts/TannenspielScripts/SpringKey.ms`, copies the icon bitmaps to
+`usericons`, and registers a `SpringKey` macro in the `TannenspielScripts`
+category.
+
 ## Rollout controls
 
 ### Tracks

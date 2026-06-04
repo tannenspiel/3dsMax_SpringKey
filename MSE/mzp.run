@@ -1,0 +1,7 @@
+name "SpringKey"
+description "Installing the script SpringKey"
+	
+	drop installer.ms
+	run installer.ms
+	
+	

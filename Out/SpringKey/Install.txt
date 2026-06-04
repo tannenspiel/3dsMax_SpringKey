@@ -1,0 +1,38 @@
+INSTALLATION
+
+Method 1:
+	- Drag the SpringKey.mzp file into the 3ds Max window and it will install itself.
+	- Customize menu -> Customize User Interface -> Toolbars -> Category TannenspielScripts -> drag the SpringKey button onto the 3ds Max toolbar.
+
+Method 2:
+	- Run mzp through Run Script: Scripting menu -> Run Script -> run SpringKey.mzp and it will install itself.
+	- Customize menu -> Customize User Interface -> Toolbars -> Category TannenspielScripts -> drag the SpringKey button onto the 3ds Max toolbar.
+
+Method 3 (if you do not want to install):
+	- Unpack the SpringKey.mzp file with any archiver, extracting SpringKey.ms.
+	- Place SpringKey.ms in any folder where it is convenient for you, and then run it through Run Script: Scripting menu -> Run Script -> run SpringKey.ms.
+
+
+NOTES
+
+If the button icon is not displayed after installation, restart 3ds Max.
+If restarting does not help, you can disable the icon:
+	- Right-click the button.
+	- Edit Macro Script.
+	- In the opened macro script, put "--" at the beginning of the Icon line:
+	  --Icon: #("SpringKey", 1)
+	- Save the macro script.
+	- Restart 3ds Max.
+
+
+Installed paths:
+
+The macro that launches the script is installed here:
+C:\Users\your_user_name\AppData\Local\Autodesk\3dsMax\2022 - 64bit\ENU\usermacros\TannenspielScripts-SpringKey.mcr
+
+The icons are installed here:
+C:\Users\your_user_name\AppData\Local\Autodesk\3dsMax\2022 - 64bit\ENU\usericons\SpringKey_24i.bmp
+C:\Users\your_user_name\AppData\Local\Autodesk\3dsMax\2022 - 64bit\ENU\usericons\SpringKey_16i.bmp
+
+The script is installed here:
+C:\Users\your_user_name\AppData\Local\Autodesk\3dsMax\2022 - 64bit\ENU\scripts\TannenspielScripts\SpringKey.ms
