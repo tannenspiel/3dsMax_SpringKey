@@ -133,15 +133,7 @@ category.
 ### Debug
 
 - `Debug Selected`: prints diagnostic information for each selected node to the
-  MAXScript listener. If logging is enabled, it also writes debug entries.
-
-### Logging
-
-- `Enable Log`: toggles writing diagnostic and key creation information to
-  `SpringKey_debug.log`.
-- `Clear Log File`: recreates `SpringKey_debug.log` and writes a fresh header.
-- `SpringKey_debug.log`: log file name. The log is written next to the loaded
-  `SpringKey.ms` file.
+  MAXScript listener.
 
 ## Notes
 
@@ -149,4 +141,5 @@ category.
   needs to preserve spins greater than 360 degrees.
 - Position and Scale are written to their local transform controllers, not to
   world-space object properties.
-- `SpringKey_debug.log` is generated only when logging is enabled or cleared.
+- Logging is currently disabled in the UI. The logging functions remain in the
+  source as commented-out debug support.

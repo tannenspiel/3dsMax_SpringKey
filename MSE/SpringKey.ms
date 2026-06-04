@@ -15,11 +15,15 @@ struct SpringKeyCore
 
     fn setLogging enabled =
     (
+        logEnabled = false
+        /*
         logEnabled = enabled
+        */
     ),
 
     fn clearLog =
     (
+        /*
         try
         (
             local f = createFile logFilePath
@@ -28,10 +32,12 @@ struct SpringKeyCore
             close f
         )
         catch()
+        */
     ),
 
     fn logText text =
     (
+        /*
         if logEnabled do
         (
             try
@@ -42,10 +48,12 @@ struct SpringKeyCore
             )
             catch()
         )
+        */
     ),
 
     fn logRotationHeader sourceNode =
     (
+        /*
         if logEnabled do
         (
             try
@@ -58,10 +66,12 @@ struct SpringKeyCore
             )
             catch()
         )
+        */
     ),
 
     fn logRotationDetails label value =
     (
+        /*
         if logEnabled do
         (
             try
@@ -72,6 +82,7 @@ struct SpringKeyCore
             )
             catch()
         )
+        */
     ),
 
     fn secondsFromTimeValue t =
@@ -2345,14 +2356,16 @@ rollout SpringKey_Rollout "SpringKey" width:248
         label lblSelectedKeys "Select an impact key." align:#center tooltip:"SpringKey uses the last selected key on the enabled tracks as the impact key."
     )
 
-    button btnDebug "Debug Selected" width:214 height:24 tooltip:"Print diagnostic information for the selected nodes to the MAXScript Listener and to the log when logging is enabled."
+    button btnDebug "Debug Selected" width:214 height:24 tooltip:"Print diagnostic information for the selected nodes to the MAXScript Listener."
 
+    /*
     group "Logging"
     (
         checkbox chkEnableLog "Enable Log" checked:false align:#left tooltip:"Write debug and key creation details to SpringKey_debug.log next to this script."
         button btnClearLog "Clear Log File" width:214 height:22 tooltip:"Clear SpringKey_debug.log and write a fresh header."
         label lblLogPath "SpringKey_debug.log" align:#center tooltip:"The log file is written next to the loaded SpringKey.ms file."
     )
+    */
 
     label lblInfo "Sparse generated keys only." align:#center tooltip:"This rollout writes animation keys directly instead of leaving live SpringKey controllers on the object."
 
@@ -2364,11 +2377,13 @@ rollout SpringKey_Rollout "SpringKey" width:248
         label lblAnticipation "Select a start key." align:#center tooltip:"Select the first key of a movement. SpringKey requires an explicitly selected key and uses the next key on the same track as the motion target."
     )
 
+    /*
     on chkEnableLog changed state do
     (
         SpringKey.setLogging state
         if state do SpringKey.logText "Logging enabled from UI."
     )
+    */
 
     on chkBounce changed state do
     (
@@ -2376,10 +2391,12 @@ rollout SpringKey_Rollout "SpringKey" width:248
         chkAutoSpringImpact.enabled = not state
     )
 
+    /*
     on btnClearLog pressed do
     (
         SpringKey.clearLog()
     )
+    */
 
     on btnBake pressed do
     (
