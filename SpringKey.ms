@@ -1236,18 +1236,9 @@ struct SpringKeyTool
                     if thresholdLimit < decayLimit do decayLimit = thresholdLimit
                 )
 
-                local halfPeriod = 1.0 / (2.0 * f)
-                local n = 0
-                while (n * halfPeriod) <= decayLimit do
-                (
-                    local dt = n * halfPeriod
-                    if dt > 0.0 do addUniqueTime times (keyTime + (dt * frameRate))
-                    n += 1
-                )
-
                 local w = 2.0 * pi * f
                 local firstPeak = if d > 0.0001 then ((atan (w / d)) / (360.0 * f)) else (1.0 / (4.0 * f))
-                n = 0
+                local n = 0
                 while (firstPeak + (n / (2.0 * f))) <= decayLimit do
                 (
                     local dt = firstPeak + (n / (2.0 * f))
@@ -1323,7 +1314,6 @@ struct SpringKeyTool
         local settleTimes = getSpringSettleTimes endTime freq decay animationRange.end threshold
         if settleTimes != undefined do
         (
-            addUniqueTime times settleTimes[1]
             addUniqueTime times settleTimes[2]
         )
         sort times
@@ -2199,7 +2189,7 @@ struct SpringKeyTool
             )
 
             local peakTimes = buildPeakBakeTimes endTime freq decay animationRange.end threshold keyStep bounceMode
-            local mainTimes = removeTimesMatching (buildMainBakeTimes endTime freq decay animationRange.end threshold keyStep bounceMode) peakTimes 0.5
+            local mainTimes = if bounceMode then (removeTimesMatching (buildMainBakeTimes endTime freq decay animationRange.end threshold keyStep bounceMode) peakTimes 0.5) else #()
             if doPosition do bakePositionTrack node sourceNode times endTime amp freq decay sample matchVelocity bounceMode fadeStartTime settleTime mainTimes keyStep
             if doRotation do bakeRotationTrack node sourceNode times endTime amp freq decay sample matchVelocity bounceMode fadeStartTime settleTime mainTimes keyStep
             if doScale do bakeScaleTrack node sourceNode times endTime amp freq decay sample matchVelocity bounceMode fadeStartTime settleTime mainTimes keyStep allowNegativeScale

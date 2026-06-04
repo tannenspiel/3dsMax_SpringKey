@@ -70,7 +70,9 @@ key.
   frames.
 - `Match incoming speed`: scales the spring response so it follows the incoming
   velocity more closely. Enabled by default. For spring keys, generated peak
-  keys use Slow tangents and generated main keys use Auto tangents.
+  keys use Slow tangents. SpringKey does not create intermediate zero-crossing
+  keys for spring tails; it keeps the curve clean and writes one final settle
+  key at the impact value.
 - `Bounce`: uses a one-sided bounce response opposite the incoming motion
   instead of a two-sided spring oscillation. It uses the same Amplitude,
   Frequency, Decay, Velocity sample, and Match incoming speed settings. Bounce
